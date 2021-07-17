@@ -18,48 +18,46 @@ SoftwareSerial mySerial_BT(bluetooth_RX, bluetooth_TX);
 
 int voice_input_hex = 0;
 int delayed_time = 0; // 블루투스 연결이 끊겨 긴급호출 지연된 시간
-int 
+int emergency_status = 0; // 응급상황O 1, 응급상황X 0 
+int bluetooth_connected = 0; // 블루투스 연결O 1, 연결X 0 (!!!!!!!!!!!! 앱에서 받아와야함 !!!!!!!!!!!!!!!)
 
 byte buffer[128];
 
-void start_voice_recogn();
-void voice_recogn();
-void button_pushed();
-void pir_recogn();
-void start_bluetooth();
+void start_voice_recogn(); // 음성인식모듈 활성화
+void voice_recogn(); // 음성인식
+void button_pushed(); // 버튼
+int pir_recogn(); // 사람 인식 (들어올때 1, 나갈때 0)
 
 void setup() {
   
   pinMode(button_IN, INPUT);
   pinMode(pir_IN, INPUT);
   Serial.begin(9600);
+  mySerial_BT.begin(9600);
   mySerial_voice.begin(9600);
   set_voice_recogn();
   
 }
 
-void loop() {
+void loop() { // 주기 : 1초
 
+  if(bt_connected){ // 블루투스 연결O
 
+    if(pir_recogn()){ // 들어올때
+      voice_recogn();
+      button_pushed();
+    }else if(pir_recogn() == 0){ // 나갈때
+      emergency_status = 0;
+      bluetooth_connected = 0;
+    }
+    
+  }else{ // 블루투스 연결X
 
-  if(pir_recogn() == 1){  
-    if(mySerail_BT.available()){ 
-    voice_recogn();
-    button_pushed();
-  }    
+    
+    
   }
 
-  
   delay(1000);
-}
-
-int bt_connected(){
-  mySerial_BT.begin(9600);  
-  if(mySerial_BT.available){
-    return 1; 
-  }else{
-    return 0;
-  }
 }
 
 void set_voice_recogn(){ // 음성인식 모듈 활성화
