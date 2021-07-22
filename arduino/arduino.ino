@@ -17,16 +17,15 @@ SoftwareSerial mySerial_voice(voice_recogn_RX, voice_recogn_TX);
 SoftwareSerial mySerial_BT(bluetooth_RX, bluetooth_TX);
 
 int voice_input_hex = 0;
-int delayed_time = 0; // 블루투스 연결이 끊겨 긴급호출 지연된 시간
-int emergency_status = 0; // 응급상황O 1, 응급상황X 0 
-int bluetooth_connected = 0; // 블루투스 연결O 1, 연결X 0 (!!!!!!!!!!!! 앱에서 받아와야함 !!!!!!!!!!!!!!!)
+int bt_connected = 0; // 블루투스 연결O 1, 연결X 0 (!!!!!!!!!!!! 앱에서 받아와야함 !!!!!!!!!!!!!!!)
+int entered = 0; // 화장실 들어옴 1, 나감 0
 
 byte buffer[128];
 
 void start_voice_recogn(); // 음성인식모듈 활성화
 void voice_recogn(); // 음성인식
 void button_pushed(); // 버튼
-int pir_recogn(); // 사람 인식 (들어올때 1, 나갈때 0)
+void pir_recogn(); // 사람 인식 (들어올때 1, 나갈때 0)
 
 void setup() {
   
@@ -36,6 +35,9 @@ void setup() {
   mySerial_BT.begin(9600);
   mySerial_voice.begin(9600);
   set_voice_recogn();
+  delay(1000);
+  bt_connected = mySerial_BT.read(); // 앱에서 블루투스 연결상태 전송받아야함
+  delay(1000);
   
 }
 
@@ -43,17 +45,18 @@ void loop() { // 주기 : 1초
 
   if(bt_connected){ // 블루투스 연결O
 
-    if(pir_recogn()){ // 들어올때
+    pir_recogn();
+
+    if(entered){ // 들어올때
       voice_recogn();
       button_pushed();
-    }else if(pir_recogn() == 0){ // 나갈때
-      emergency_status = 0;
-      bluetooth_connected = 0;
+    }else{ // 나갈때
+      
     }
     
   }else{ // 블루투스 연결X
 
-    
+    bt_connected = mySerial_BT.read(); // 연결 끊기면 연결상태 계속 점검
     
   }
 
@@ -62,21 +65,21 @@ void loop() { // 주기 : 1초
 
 void set_voice_recogn(){ // 음성인식 모듈 활성화
   Serial.println("wait settings are in progress");
-  delay(1000);
+  delay(500);
   mySerial_voice.write(0xAA); // compact mode
   mySerial_voice.write(0x37);
-  delay(1000);
   mySerial_voice.write(0xAA);
   mySerial_voice.write(0x21);
+  delay(500);
 
   Serial.println("The settings are complete");
 }
 
 void voice_recogn(){ // 음성인식 
   while(mySerial_voice.available()){
-    Serial.println("Voice input");
+    Serial.println("음성감지");
     voice_input_hex = mySerial_voice.read();
-    Serial.print("voice_recogn:");
+    Serial.print("감지된 음성 16진수:");
     Serial.println(voice_input_hex);
     
     switch(voice_input_hex){
@@ -96,24 +99,25 @@ void button_pushed(){ // 응급호출 버튼
   int value = digitalRead(button_IN);
 
   if(value == HIGH){
-    Serial.println("Emergency Button Pushed");
+    Serial.println("버튼 응급호출");
     mySerial_BT.write(buffer, button_emergency);
   }
+  
 }
 
 int pir_recogn(){ // (!!!! 수정 필요<계속 감지되는 경우에 대한 예외처리 해야함> !!!!)
   int value = digitalRead(pir_IN);
   int count = 0;
 
-  if(value == HIGH && count==0){ // 들어오는 경우
-    Serial.println("Movement recognition");
+  if(value == HIGH && count == 0){ // 들어오는 경우
+    Serial.println("들어옴");
     mySerial_BT.write(buffer, person_in);
+    count = 1;
+    entered = 1;
+  }else if(value == HIGH && count != 0){ // 안에서 움직이는 경우
+    Serial.println("내부활동");
     count++;
-    return 1;
-  }else if(value == HIGH && count!=0){ // 나가는 경우
-    Serial.println("Movement recognition");
-    mySerial_BT.write(buffer, person_out);
-    count = 0;
-    return 0;
   }
+
+  
 }
