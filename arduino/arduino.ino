@@ -19,6 +19,8 @@ SoftwareSerial mySerial_BT(bluetooth_RX, bluetooth_TX);
 int voice_input_hex = 0;
 int bt_connected = 0; // 블루투스 연결O 1, 연결X 0 (!!!!!!!!!!!! 앱에서 받아와야함 !!!!!!!!!!!!!!!)
 int entered = 0; // 화장실 들어옴 1, 나감 0
+int count = 0; // 적외선 센서 감지 횟수
+int time_delayed = 0; // 적외선 센서 마지막 감지 이후 경과된 시간
 
 byte buffer[128];
 
@@ -36,7 +38,11 @@ void setup() {
   mySerial_voice.begin(9600);
   set_voice_recogn();
   delay(1000);
+  
+  if(mySerial_BT.available()){
   bt_connected = mySerial_BT.read(); // 앱에서 블루투스 연결상태 전송받아야함
+  }
+  
   delay(1000);
   
 }
@@ -50,13 +56,13 @@ void loop() { // 주기 : 1초
     if(entered){ // 들어올때
       voice_recogn();
       button_pushed();
-    }else{ // 나갈때
-      
     }
     
   }else{ // 블루투스 연결X
 
+    if(mySerial_BT.available()){
     bt_connected = mySerial_BT.read(); // 연결 끊기면 연결상태 계속 점검
+    }
     
   }
 
@@ -105,18 +111,24 @@ void button_pushed(){ // 응급호출 버튼
   
 }
 
-int pir_recogn(){ // (!!!! 수정 필요<계속 감지되는 경우에 대한 예외처리 해야함> !!!!)
+int pir_recogn(){ // (!!!! 수정 필요<안에서 움직이는 경우에 대한 예외처리 해야함> !!!!)
   int value = digitalRead(pir_IN);
-  int count = 0;
 
-  if(value == HIGH && count == 0){ // 들어오는 경우
+  if(value == HIGH && count == 0){ // 들어오는 경우수
     Serial.println("들어옴");
     mySerial_BT.write(buffer, person_in);
-    count = 1;
+    count++;
     entered = 1;
   }else if(value == HIGH && count != 0){ // 안에서 움직이는 경우
     Serial.println("내부활동");
     count++;
+    time_delayed++;
+  }else if(time_delayed >= 10){ // 나가는 경우
+    Serial.println("나감");
+    mySerial_BT.write(buffer, person_out);
+    count = 0;
+    entered = 0;
+    time_delayed = 0;
   }
 
   
