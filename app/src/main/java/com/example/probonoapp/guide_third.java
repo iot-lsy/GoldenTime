@@ -34,10 +34,10 @@ public class guide_third extends Fragment {
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.activity_guide_second, container, false);
-        TextView tvLabel = (TextView) view.findViewById(R.id.user_text);
+        View view = inflater.inflate(R.layout.activity_guide_third, container, false);
+        //TextView tvLabel = (TextView) view.findViewById(R.id.user_text);
 
-        tvLabel.setText("30분 초과시 위험합니다!");
+        //tvLabel.setText("30분 초과시 위험합니다!");
         return view;
     }
 }

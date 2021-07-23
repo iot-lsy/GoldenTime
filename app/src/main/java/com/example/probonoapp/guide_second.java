@@ -35,10 +35,10 @@ public class guide_second extends Fragment {
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.activity_guide_second, container, false);
-        TextView tvLabel = (TextView) view.findViewById(R.id.user_text);
+        //TextView tvLabel = (TextView) view.findViewById(R.id.user_text);
 
 
-        tvLabel.setText("30분 미만일시 안전합니다!");
+        //tvLabel.setText("30분 미만일시 안전합니다!");
         return view;
     }
 }

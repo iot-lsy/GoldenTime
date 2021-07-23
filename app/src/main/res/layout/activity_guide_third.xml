@@ -17,20 +17,53 @@
             <ImageView
                 android:id="@+id/main"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
+                android:layout_height="426dp"
+                android:layout_alignParentBottom="true"
                 android:layout_gravity="center"
-                android:src="@drawable/user_toilet_up" />
+                android:layout_marginBottom="253dp"
+                android:src="@drawable/example2" />
 
             <TextView
                 android:id="@+id/user_text"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_alignParentBottom="true"
                 android:layout_marginTop="575dp"
+                android:layout_marginBottom="188dp"
+                android:fontFamily="@font/gmarketsansttflight"
                 android:gravity="center"
-                android:textSize="18sp" />
+                android:text=" 노약자가 30분이상 머무른 경우, \n 보호자 앱으로 📢알림과 팝업이 전송됩니다!"
+                android:textColor="#000"
+                android:textSize="14dp" />
+
+            <TextView
+                android:id="@+id/textView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_alignParentBottom="true"
+                android:layout_marginBottom="125dp"
+                android:fontFamily="@font/gmarketsansttflight"
+                android:gravity="center"
+                android:text=" 노약자가 응급상황이 아닌 것이 명확하다면,\n 빨간버튼을 눌러👇︎\n 자동신고가 되지 않도록 막을 수 있습니다."
+                android:textColor="#000"
+                android:textSize="14dp" />
+
+            <TextView
+                android:id="@+id/textView4"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_alignParentBottom="true"
+                android:layout_marginBottom="51dp"
+                android:fontFamily="@font/gmarketsansttflight"
+                android:gravity="center"
+                android:text=" 5분간 응답이 없을 시❕❕\n 구조대에게 신고가 접수되어\n 회원가입 시 입력한 자택 주소로 🚑구조대가 출동합니다."
+                android:textColor="#000"
+                android:textSize="14dp" />
+
 
         </RelativeLayout>
 
 
     </FrameLayout>
+
 </LinearLayout>

@@ -41,7 +41,7 @@ public class activity_introduce extends AppCompatActivity {
     }
 
     public static class MyPagerAdapter extends FragmentPagerAdapter {
-        private static int NUM_ITEMS = 3;
+        private static int NUM_ITEMS = 3; //페이지 개수
 
         public MyPagerAdapter(FragmentManager fragmentManager) {
             super(fragmentManager);
