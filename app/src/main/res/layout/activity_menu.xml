@@ -13,7 +13,7 @@
         android:background="@drawable/button_background"
         android:backgroundTint="#000"
         android:fontFamily="@font/gmarketsansttflight"
-        android:text="설정"
+        android:text="계정 관리"
         android:textColor="#000"
         android:textSize="13dp"
         app:backgroundTint="#F2CA50"
