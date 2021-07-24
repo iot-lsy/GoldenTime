@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:orientation="vertical">
+
+    <FrameLayout
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_gravity="center"
+            android:orientation="vertical">
+
+
+            <ImageView
+                android:layout_width="match_parent"
+                android:layout_height="426dp"
+                android:layout_above="@+id/user_text"
+                android:layout_below="@+id/main"
+                android:layout_alignParentStart="true"
+                android:layout_alignParentEnd="true"
+                android:layout_marginStart="2dp"
+                android:layout_marginEnd="-2dp"
+                android:layout_marginBottom="33dp"
+                android:src="@drawable/example1" />
+
+            <TextView
+                android:id="@+id/user_text"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_alignParentBottom="true"
+                android:layout_marginBottom="206dp"
+                android:fontFamily="@font/gmarketsansttflight"
+                android:gravity="left"
+                android:text="  👷‍♀👷️'Golden Time' 을 통해,\n  노약자의 응급상황에 신속하게 대처할 수 있습니다. \n\n ❕다음과 같은 상황에 자동으로 응급호출됩니다."
+                android:textColor="#000"
+                android:textSize="13dp" />
+
+            <TextView
+                android:id="@+id/textView3"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_alignParentBottom="true"
+                android:layout_marginBottom="80dp"
+                android:fontFamily="@font/gmarketsansttflight"
+                android:gravity="left"
+                android:text="  ❶ 노약자가 안전바의 응급호출 버튼을 누른 경우\n\n  ❷ 노약자의 낙상 사고가 감지된 경우\n\n  ❸ 노약자가 음성으로 도움을 요청한 경우\n\n  ❹ 노약자가 30분이상 화장실에 머무른 경우"
+                android:textColor="#000"
+                android:textSize="13dp"
+                android:textStyle="italic" />
+
+            <TextView
+                android:id="@+id/textView6"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_alignParentBottom="true"
+                android:layout_marginBottom="36dp"
+                android:fontFamily="@font/gmarketsansttflight"
+                android:gravity="center"
+                android:text="⭐5분 이내로 보호자 응답없을 시 119신고 됩니다."
+                android:textColor="#000"
+                android:textSize="13dp" />
+
+
+        </RelativeLayout>
+
+
+    </FrameLayout>
+
+</LinearLayout>
