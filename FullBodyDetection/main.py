@@ -1,5 +1,4 @@
 import cv2
-import timeit
 
 # 영상 정보 불러오기
 video = cv2.VideoCapture('FALL-Backwards_.mp4')
