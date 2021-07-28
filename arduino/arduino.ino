@@ -33,7 +33,7 @@ int emergency_delayed = 0; // 응급상황에서 블루투스 끊긴 시간
 int pir_value = LOW; // 적외선 감지O HIGH, 적외선 감지X LOW
 int pir_state = 0; // 내부활동 구별용
 int button_value = LOW; // 응급호출 버튼O HIGH, 응급호출 버튼X LOW
-
+int bt_zero_count = 0; // statepin 0으로 인식
 
 void set_voice_recogn(); // 음성인식모듈 활성화
 void voice_recogn(); // 음성인식
@@ -68,12 +68,12 @@ void loop() { // 주기 : 1초
 
     Serial.println("블루투스 연결 성공");
     
-    if(Serial.available()) pir_recogn();
+    pir_recogn();
        
     if(entered){ // 내부에 있는 경우
       
       send_signal();
-      
+
     }
     
   }else{ // 블루투스 연결X
@@ -106,15 +106,14 @@ void send_signal(){
 void get_signal(){
 
   bt_connected = 0;
-
-  /*
+  bt_zero_count = 0;
+    
   for(int i=0; i<1000; i++){
 
-    if(bt_count == 0 && bt_connected == 0){
-      bt_connected = digitalRead(bluetooth_state);
-      Serial.print("get_signal()_bt_data : ");
-      Serial.println(bt_connected);
-      //bt_count++;
+    bt_connected = digitalRead(bluetooth_state);
+
+    if(bt_connected == 0){
+      bt_zero_count++; //불빛 들어오는 경우 1로 인식하고 안들어오는 경우 0으로 인식해서 연결이 안되어 있어 반짝거리는 경우에도 1로 인식
     }
 
     if(i%20 == 0){
@@ -124,17 +123,9 @@ void get_signal(){
     
     delay(1);
   }
-  */
-
-  for(int i=0; i<20; i++){
-    
-    button_pushed();
-    //voice_recogn();
   
-    bt_connected = digitalRead(bluetooth_state);
-    
-    delay(50);
-  }
+
+  if(bt_zero_count != 0) bt_connected = 0;
   
 }
 
