@@ -2,7 +2,7 @@
 
 ![git_font_1](/uploads/feb79615572189308b4c9c30c342045a/git_font_1.gif)
 
-내용
+내용 :  노인들의 낙상 사고를 사전에 예방하고, 사고가 발생했을 시 응급호출 환경 부재에 놓이지 않도록 자동 신고 기능을 갖춘 안전바 및 응급 호출 시스템
 
 
 ![git_font_2](/uploads/c426a7c54acee66babac00cffe20b2b5/git_font_2.gif)
