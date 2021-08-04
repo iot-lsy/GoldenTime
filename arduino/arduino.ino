@@ -12,7 +12,9 @@
 
 #define button_IN 12
 
-#define emergency_signal 119 // 응급상황 119 값을 블루투스를 통해 앱으로전송
+#define emergency_voice 101 // 음성 응급호출시 101 전송
+#define emergency_button 102 // 버튼 응급호출시 102 전송
+#define fall_detect 111 // 낙상 감지시 111 전송
 
 #define person_in 121 // pir센서 들어오는 경우 121 전송
 #define person_out 122 // pir센서 나가는 경우 122 전송
@@ -27,7 +29,10 @@ int bt_connected = 0; // 블루투스 연결O 1, 연결X 0
 int entered = 0; // 화장실 들어옴 1, 나감 0
 int time_delayed = 0; // 적외선 센서 마지막 감지 이후 경과된 시간
 
-int emergency_status = 0; // 응급상황O 1, 응급상황X 0
+int emergency_status_voice = 0; // 음성 응급호출
+int emergency_status_button = 0; // 버튼 응급호출
+int fall_status = 0; // 낙상O 1, 낙상X 0
+
 int emergency_delayed = 0; // 응급상황에서 블루투스 끊긴 시간
 
 int pir_value = LOW; // 적외선 감지O HIGH, 적외선 감지X LOW
@@ -92,15 +97,22 @@ void loop() { // 주기 : 1초
 
 void send_signal(){
   
-  if(emergency_status){
+  if(emergency_status_voice){
     
-    mySerial_BT.write(emergency_signal);
-    if(emergency_delayed!=0) mySerial_BT.write(emergency_delayed);
-    Serial.println("응급상황 앱으로 전송");
+    mySerial_BT.write(emergency_voice);
+    //if(emergency_delayed!=0) mySerial_BT.write(emergency_delayed);
+    Serial.println("음성 응급호출 / 응급상황 앱으로 전송");
     
+  }else if(emergency_status_button){
+    
+    mySerial_BT.write(emergency_button);
+    //if(emergency_delayed!=0) mySerial_BT.write(emergency_delayed);
+    Serial.println("버튼 응급호출 / 응급상황 앱으로 전송");
+        
   }
 
-  emergency_status = 0;
+  emergency_status_button = 0;
+  emergency_status_voice = 0;
 }
 
 void get_signal(){
@@ -155,7 +167,7 @@ void voice_recogn(){ // 음성인식
       case 0x14:
       case 0x15:
         Serial.println("음성 응급호출");      
-        emergency_status = 1;
+        emergency_status_voice = 1;
         break;
     }
   }
@@ -167,7 +179,7 @@ void button_pushed(){ // 응급호출 버튼
   
   if(button_value == HIGH){
     Serial.println("버튼 응급호출");
-    emergency_status = 1;
+    emergency_status_button = 1;
   }
 
   button_value = LOW;
