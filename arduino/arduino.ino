@@ -31,6 +31,8 @@ int count = 0; // 활동감지 횟수
 int button_push_time = 0; // 버튼 눌러지는 시간
 int button_emergency = 0; // 버튼호출 표준 0 호출 1
 int voice_emergency = 0; // 음성호출 표준 0 호출 1
+int cancel_signal = 0; // 표준 0 응급호출 신호 취소 1 
+int delayed_time = 0; // 와이파이 접속 끊어진 시간
 
 
 void setup() {
@@ -72,9 +74,34 @@ void setup() {
 
 void loop() {
 
+  if(WiFi.status() == WL_CONNECTED && !Firebase.failed()){
+    
   inout_check();
+  button_check();
   
-  
+  }else{
+    
+    Serial.print("와이파이 재연결 중");
+    
+    while(WiFi.status() != WL_CONNECTED){
+      delayed_time++;
+      Serial.print("."); 
+      delay(1000);
+    }
+    Serial.println("와이파이 재연결 성공!");
+    
+    Serial.println("파이어베이스 재연결 중");
+    while(Firebase.failed()){
+      delayed_time++;
+      Serial.print(".");
+      delay(1000);
+      
+    }
+    Serial.println("파이어베이스 재연결 성공!");
+    Serial.print("지연시간 : ");
+    Serial.print(delayed_time);
+    Serial.println("(초)");
+  }
   
   
 }
@@ -130,11 +157,13 @@ void button_check(){
       
       Serial.println("버튼 응급호출 취소");
       button_emergency = 0;
+      cancel_signal = 1;
       
     }else if(voice_emergency){
       
       Serial.println("음성 응급호출 취소");
       voice_emergency = 0;
+      cancel_signal = 1;
       
     }else{
       
