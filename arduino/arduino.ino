@@ -1,5 +1,6 @@
 #include <ESP8266WiFi.h>
 #include <FirebaseArduino.h>
+#include <TimeLib.h>
 
 
 // Set these to run example.
@@ -34,17 +35,20 @@ void send_signal(); // 파이어베이스 데이터 전송 함수
 void button_check(); // 버튼 센싱 함수
 void voice_check(); // 음성 센싱 함수
 void buzzer_out(int); // 부저 울리는 함수 (매개변수 0 : 취소알림소리, 1 : 응급상황알림소리, 2 : 입장알림소리)
+void get_signal(); // 센서 데이터 가져오는 함수
 
 
 int entered = 0; // 표준 0, 들어감 1, 나감 2
 int count = 0; // 활동감지 횟수
-int button_push_time = 0; // 버튼 눌러지는 시간
 int button_emergency = 0; // 버튼호출 표준 0, 호출 1
 int voice_emergency = 0; // 음성호출 표준 0, 호출 1
 int cancel_signal = 0; // 표준 0, 응급호출 신호 취소 1 
 int pir_delay_time = 0; // 입장 시간
 int delay_time = 0; // 와이파이 접속 끊어진 시간
 
+int pir_value = 0; // pir 센서값
+int button_value = 0; // 버튼 센서값
+int button_count = 0; // 버튼 클릭 횟수
 
 void setup() {
   
@@ -91,11 +95,11 @@ void loop() {
 
   //정상상태
   if(WiFi.status() == WL_CONNECTED && !Firebase.failed()){
-    
+
+    get_signal();
     inout_check();
-    //button_check();
+    button_check();
     send_signal();
-    Serial.println("loop()");
 
   //접속불량
   }else{
@@ -108,7 +112,7 @@ void loop() {
       while(WiFi.status() != WL_CONNECTED){
         delay_time++;
         Serial.print("."); 
-        delay(1000);
+        get_signal();
       }
       
       Serial.println("와이파이 재연결 성공!");
@@ -120,9 +124,9 @@ void loop() {
       Serial.println("파이어베이스 재연결 중");
       
       while(Firebase.failed()){
-      delay_time++;
-      Serial.print(".");
-      delay(1000);
+        delay_time++;
+        Serial.print(".");
+        get_signal();
       }
       
       Serial.println("파이어베이스 재연결 성공!");
@@ -141,10 +145,7 @@ void loop() {
 
 void inout_check(){
 
-  int value = digitalRead(pir_OUT);
-  Serial.print("value : ");
-  Serial.println(value);
-  if(value == HIGH && count == 0){ // 들어오는 경우
+  if(pir_value == HIGH && count == 0){ // 들어오는 경우
     
     Serial.println("들어옴");
     pir_delay_time = 0;
@@ -152,7 +153,7 @@ void inout_check(){
     //처음 입장시간 저장
     //부저 함수 추가
     
-  }else if(value == HIGH && count != 0){ // 안에서 움직이는 경우
+  }else if(pir_value == HIGH && count != 0){ // 안에서 움직이는 경우
     
     Serial.println("내부활동");
     count = 1;
@@ -168,30 +169,18 @@ void inout_check(){
 
   }  
 
-  pir_delay_time++;
-  delay(1000);  
-
 }
 
 
 void button_check(){
 
-  int value = digitalRead(button_OUT);
-
-  if(value == HIGH){
-    while(value != LOW || button_push_time != 3){
-      button_push_time++;
-      pir_delay_time++;
-      value = digitalRead(button_OUT);
-      delay(1000);
-    }
-  }
-
-  if(button_push_time <= 2){ // 일반적 응급호출 (최대 2.9초 까지 응급호출로 인식)
+  
+  if(button_count <= 25){ // 일반적 응급호출 (최대 0.5초 까지 응급호출로 인식)
     
     button_emergency = 1;
+    //부저 함수 추가
     
-  }else{ // 모든 응급호출 취소 버튼 (버튼 3초 이상 누른경우)
+  }else{ // 모든 응급호출 취소 버튼 (버튼 0.5초 이상 누른경우)
 
     if(button_emergency){
       
@@ -212,10 +201,9 @@ void button_check(){
       Serial.println("취소할 응급호출 신호가 존재하지 않습니다");
       
     }
-    
   }
 
-  button_push_time = 0;
+  button_count = 0;
   
 }
 
@@ -254,5 +242,27 @@ void send_signal(){  // 중요 - 모든 응급신호 10초간 대기하고 10초
 
   //버튼 전송 조건문 
 
+  
+}
+
+void get_signal(){
+
+  for(int i=0;i<50;i++){
+    if(pir_value != 1){
+      pir_value = digitalRead(pir_OUT);
+    }
+
+    if(button_value != 1){
+      button_value = digitalRead(button_OUT);
+    }
+
+    if(button_value){
+      button_count++;
+    }
+    
+    delay(20);
+  }
+
+  
   
 }
