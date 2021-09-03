@@ -1,7 +1,5 @@
-#include <SoftwareSerial.h>
 #include <ESP8266WiFi.h>
 #include <FirebaseArduino.h>
-
 
 
 // Set these to run example.
@@ -10,32 +8,26 @@
 #define WIFI_SSID "U+Net1D1B"
 #define WIFI_PASSWORD "0192023420"
 
-//D6~11 플래시메모리용으로 사용중
-//D0,2,15 부팅모드 설정용 사용시 주의
-//D1,3 시리얼 통신용
-//D16 Wake용
+//WeMos D1 R2
+// GPIO16 - D0
+// GPIO5 - D1
+// GPIO4 - D2
+// GPIO0 - D3
+// GPIO2 - D4
+// GPIO14 - D5
+// GPIO12 - D6
+// GPIO13 - D7
+// GPIO15 - D8
+// A0 - A0
 
-#define led_IN 4
-#define button_OUT 7
-#define buzzer_IN 5
-#define voice_TX 8
-#define voice_RX 9
+//D2~8 사용가능
+#define led_IN 5 //D1 - GPIO5
+#define button_OUT 4 //D2 - GPIO4
+#define pir_OUT 0 //D3 - GPIO0
+#define buzzer_IN 2 //D4 - GPIO2
+#define voice_RX 14 //D5 - GPIO14
+#define voice_TX 12 //D6 - GPIO12
 
-const int GPIO_1 = 0;
-const int led = 0;
-
-uint8_t pir_OUT = 6;
-
-#define wifi_RX 2
-#define wifi_TX 3
-
-SoftwareSerial mywifi(wifi_RX, wifi_TX);
-
-//#define voice_emergency 111 // 음성 응급호출 111 전송
-//#define button_emergency 112 // 버튼 응급호출 112 전송
-//#define button_emergency_cancel 113 // 응급호출 취소 113 전송
-//#define person_in 121 // pir센서 들어오는 경우 121 전송
-//#define person_out 122 // pir센서 나가는 경우 122 전송
 
 void inout_check(); // 출입감지 함수
 void send_signal(); // 파이어베이스 데이터 전송 함수
@@ -43,14 +35,15 @@ void button_check(); // 버튼 센싱 함수
 void voice_check(); // 음성 센싱 함수
 void buzzer_out(int); // 부저 울리는 함수 (매개변수 0 : 취소알림소리, 1 : 응급상황알림소리, 2 : 입장알림소리)
 
+
 int entered = 0; // 표준 0, 들어감 1, 나감 2
 int count = 0; // 활동감지 횟수
 int button_push_time = 0; // 버튼 눌러지는 시간
 int button_emergency = 0; // 버튼호출 표준 0, 호출 1
 int voice_emergency = 0; // 음성호출 표준 0, 호출 1
 int cancel_signal = 0; // 표준 0, 응급호출 신호 취소 1 
-int pir_delayed_time = 0; 
-int delayed_time = 0; // 와이파이 접속 끊어진 시간
+int pir_delay_time = 0; // 입장 시간
+int delay_time = 0; // 와이파이 접속 끊어진 시간
 
 
 void setup() {
@@ -60,14 +53,14 @@ void setup() {
   pinMode(button_OUT, INPUT);
   pinMode(led_IN, OUTPUT);
   pinMode(buzzer_IN, OUTPUT);
+  //음성인식 softwareserial 추가
   
-  Serial.begin(9600);
-  mywifi.begin(9600);
+  Serial.begin(115200);
 
 
   //와이파이 연결
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  Serial.print("connecting");
+  Serial.print("와이파이 연결 중");
   
   while (WiFi.status() != WL_CONNECTED) {
     Serial.print(".");
@@ -75,9 +68,10 @@ void setup() {
   }
   
   Serial.println();
-  Serial.println("connected!");
+  Serial.println("와이파이 연결 성공!");
   Serial.print("SSID : ");
   Serial.println(WiFi.localIP());
+
 
   //파이어베이스 연결
   Firebase.begin(FIREBASE_HOST, FIREBASE_AUTH);
@@ -87,7 +81,7 @@ void setup() {
     Serial.print(".");
     delay(500);
   }
-
+  Serial.println("");
   Serial.println("파이어베이스 연결 성공!");
   
 }
@@ -95,36 +89,51 @@ void setup() {
 
 void loop() {
 
+  //정상상태
   if(WiFi.status() == WL_CONNECTED && !Firebase.failed()){
     
     inout_check();
-    button_check();
+    //button_check();
     send_signal();
     Serial.println("loop()");
-  
+
+  //접속불량
   }else{
+
+    if(WiFi.status() != WL_CONNECTED){
+      WiFi.begin(WIFI_SSID, WIFI_PASSWORD);  
+
+      Serial.print("와이파이 재연결 중");
     
-    Serial.print("와이파이 재연결 중");
-    
-    while(WiFi.status() != WL_CONNECTED){
-      delayed_time++;
-      Serial.print("."); 
-      delay(1000);
+      while(WiFi.status() != WL_CONNECTED){
+        delay_time++;
+        Serial.print("."); 
+        delay(1000);
+      }
+      
+      Serial.println("와이파이 재연결 성공!");
     }
-    Serial.println("와이파이 재연결 성공!");
     
-    Serial.println("파이어베이스 재연결 중");
-    while(Firebase.failed()){
-      delayed_time++;
+    if(Firbase.failed()){
+      Firebase.begin(FIREBASE_HOST, FIREBASE_AUTH);
+    
+      Serial.println("파이어베이스 재연결 중");
+      
+      while(Firebase.failed()){
+      delay_time++;
       Serial.print(".");
       delay(1000);
+      }
       
+      Serial.println("파이어베이스 재연결 성공!");
     }
-    Serial.println("파이어베이스 재연결 성공!");
+
+
     Serial.print("지연시간 : ");
-    Serial.print(delayed_time);
+    Serial.print(delay_time);
     Serial.println("(초)");
-    pir_delayed_time += delayed_time;
+    pir_delay_time += delay_time;
+
   }
 
 }
@@ -138,7 +147,7 @@ void inout_check(){
   if(value == HIGH && count == 0){ // 들어오는 경우
     
     Serial.println("들어옴");
-    pir_delayed_time = 0;
+    pir_delay_time = 0;
     entered = 1;
     //처음 입장시간 저장
     //부저 함수 추가
@@ -147,20 +156,21 @@ void inout_check(){
     
     Serial.println("내부활동");
     count = 1;
-    pir_delayed_time = 0;
+    pir_delay_time = 0;
     
-  }else if(pir_delayed_time >= 30){ // 나가는 경우 (내부활동 30초 이상 없을경우)
+  }else if(pir_delay_time >= 30){ // 나가는 경우 (내부활동 30초 이상 없을경우)
     
     Serial.println("나감");
-    pir_delayed_time = 0;
+    pir_delay_time = 0;
     count = 0;
     entered = 2;
     //입장시간 초기화
 
   }  
 
-  pir_delayed_time++;
+  pir_delay_time++;
   delay(1000);  
+
 }
 
 
@@ -171,7 +181,7 @@ void button_check(){
   if(value == HIGH){
     while(value != LOW || button_push_time != 3){
       button_push_time++;
-      pir_delayed_time++;
+      pir_delay_time++;
       value = digitalRead(button_OUT);
       delay(1000);
     }
@@ -244,48 +254,5 @@ void send_signal(){  // 중요 - 모든 응급신호 10초간 대기하고 10초
 
   //버튼 전송 조건문 
 
-
-  /*
-  // get value 
-  Serial.print("number: ");
-  Serial.println(Firebase.getFloat("number"));
-  delay(1000);
-
-  // remove value
-  Firebase.remove("number");
-  delay(1000);
-
-  // set string value
-  Firebase.setString("message", "hello world");
-  // handle error
-  if (Firebase.failed()) {
-      Serial.print("setting /message failed:");
-      Serial.println(Firebase.error());  
-      return;
-  }
-  delay(1000);
-  
-  // set bool value
-  Firebase.setBool("truth", false);
-  // handle error
-  if (Firebase.failed()) {
-      Serial.print("setting /truth failed:");
-      Serial.println(Firebase.error());  
-      return;
-  }
-  delay(1000);
-
-  // append a new value to /logs
-  String name = Firebase.pushInt("logs", n++);
-  // handle error
-  if (Firebase.failed()) {
-      Serial.print("pushing /logs failed:");
-      Serial.println(Firebase.error());  
-      return;
-  }
-  Serial.print("pushed: /logs/");
-  Serial.println(name);
-  delay(1000);
-  */
   
 }
