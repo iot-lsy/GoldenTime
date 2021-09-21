@@ -1,13 +1,49 @@
+#include <Arduino.h>
+#include <Stream.h>
 #include <ESP8266WiFi.h>
-#include <FirebaseArduino.h>
 #include <TimeLib.h>
 
+//AWS
+#include "sha256.h"
+#include "Utils.h"
+#include "AWSClient.h"
 
-// Set these to run example.
-#define FIREBASE_HOST "arduino-541d0-default-rtdb.asia-southeast1.firebasedatabase.app"
-#define FIREBASE_AUTH "R3RGvY2LloKhe5XfIjWksTr7w7ZovVmCIMZu643P"
-#define WIFI_SSID "U+Net1D1B"
-#define WIFI_PASSWORD "0192023420"
+//WEBSockets
+#include <WebSocketsClient.h>
+
+//MQTT PAHO
+#include <SPI.h>
+#include <IPStack.h>
+#include <Countdown.h>
+#include <MQTTClient.h>
+
+//AWS MQTT Websocket
+#include "Client.h"
+#include "AWSWebSocketClient.h"
+#include "CircularByteBuffer.h"
+
+
+//AWS IOT config, change these:
+//*******************************
+
+int port = 443;
+
+//MQTT config
+const int maxMQTTpackageSize = 512;
+const int maxMQTTMessageHandlers = 1;
+
+WiFiClientSecure espclient;
+
+AWSWebSocketClient awsWSclient(1000);
+
+IPStack ipstack(awsWSclient);
+
+MQTT::Client<IPStack, Countdown, maxMQTTpackageSize, maxMQTTMessageHandlers> *client = NULL;
+
+//# of connections
+long connection = 0;
+
+
 
 //WeMos D1 R2
 // GPIO16 - D0
@@ -26,15 +62,18 @@
 #define button_OUT D2 //D2 - GPIO4
 #define pir_OUT D3 //D3 - GPIO0
 #define buzzer_IN D4 //D4 - GPIO2
-#define voice_RX 14 //D5 - GPIO14
-#define voice_TX 12 //D6 - GPIO12
+
 
 
 void inout_check(); // 출입감지 함수
 void send_signal(); // 파이어베이스 데이터 전송 함수
 void get_signal(); // 센서 데이터 가져오는 함수
 void button_check(); // 버튼 센싱 함수
-//void voice_check(); // 음성 센싱 함수
+bool connect();
+void subscribe();
+void sendmessage();
+void setup_wifi();
+
 //void buzzer_out(int); // 부저 울리는 함수 (매개변수 0 : 취소알림소리, 1 : 응급상황알림소리, 2 : 입장알림소리)
 
 
@@ -42,7 +81,6 @@ void button_check(); // 버튼 센싱 함수
 int entered = 0; // 표준 0, 들어감 1, 나감 2
 int count = 0; // 활동감지 횟수
 int button_emergency = 0; // 버튼호출 표준 0, 호출 1
-int voice_emergency = 0; // 음성호출 표준 0, 호출 1
 int cancel_signal = 0; // 표준 0, 응급호출 신호 취소 1 
 int pir_delay_time = 0; // 입장 시간
 int delay_time = 0; // 와이파이 접속 끊어진 시간
@@ -58,6 +96,39 @@ int emergency_time_now = 0;
 int enter_time = 0;
 int in_time = 0;
 
+//generate random mqtt clientID
+char* generateClientID() {
+    char* cID = new char[23]();
+    for (int i = 0; i<22; i += 1)
+        cID[i] = (char)random(1, 256);
+    return cID;
+}
+
+//count messages arrived
+int arrivedcount = 0;
+
+//callback to handle mqtt messages
+void messageArrived(MQTT::MessageData& md)
+{
+    MQTT::Message &message = md.message;
+
+    Serial.print("Message ");
+    Serial.print(++arrivedcount);
+    Serial.print(" arrived: qos ");
+    Serial.print(message.qos);
+    Serial.print(", retained ");
+    Serial.print(message.retained);
+    Serial.print(", dup ");
+    Serial.print(message.dup);
+    Serial.print(", packetid ");
+    Serial.println(message.id);
+    Serial.print("Payload ");
+    char* msg = new char[message.payloadlen + 1]();
+    memcpy(msg, message.payload, message.payloadlen);
+    Serial.println(msg);
+    delete msg;
+}
+
 void setup() {
   
   // 센서 디지털 핀 모드 설정
@@ -65,42 +136,28 @@ void setup() {
   pinMode(button_OUT, INPUT);
   //pinMode(led_IN, OUTPUT);
   //pinMode(buzzer_IN, OUTPUT);
-  //음성인식 softwareserial 추가
+
   
   Serial.begin(115200);
 
 
   //와이파이 연결
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  Serial.print("와이파이 연결 중");
-  
-  while (WiFi.status() != WL_CONNECTED) {
-    Serial.print(".");
-    delay(500);
-  }
-  
-  Serial.println();
-  Serial.println("와이파이 연결 성공!");
-  Serial.print("SSID : ");
-  Serial.println(WiFi.localIP());
+  setup_wifi();
 
 
   //파이어베이스 연결
-  Firebase.begin(FIREBASE_HOST, FIREBASE_AUTH);
-  Serial.print("파이어베이스 연결 중");
-  
-  while(Firebase.failed()){
-    Serial.print(".");
-    delay(500);
-  }
-  Serial.println("");
-  Serial.println("파이어베이스 연결 성공!");
+  Serial.setDebugOutput(1);
+    
+  //fill AWS parameters    
+  awsWSclient.setAWSRegion(aws_region);
+  awsWSclient.setAWSDomain(aws_endpoint);
+  awsWSclient.setAWSKeyID(aws_key);
+  awsWSclient.setAWSSecretKey(aws_secret);
 
-  //파이어베이스 초기화
-  Firebase.setString("enter", "false");
-  Firebase.setString("button", "false");
-  Firebase.setString("thirty_mins", "false");
-  Firebase.setString("sixty_mins", "false");
+  if (connect()) {
+      subscribe();
+      sendmessage();
+  }
 
   //센서초기화
   pir_value = 0; // pir 센서값
@@ -111,22 +168,27 @@ void setup() {
 
 
 void loop() {
-
-  //정상상태
-  if(WiFi.status() == WL_CONNECTED && !Firebase.failed()){
-
-    inout_check();
-    get_signal();
-    button_check();
-    send_signal();
+  
+  //keep the mqtt up and running
+  if (awsWSclient.connected() && WiFi.status() == WL_CONNECTED) {
     
-  //접속불량
-  }else{
+      client->yield();     
+      inout_check();
+      get_signal();
+      button_check();
+      send_signal();
+      
+  }
+  else {
+      //handle reconnection
 
-    int time1 = (hour() * 3600) + (minute() * 60) + second();
-
-    if(WiFi.status() != WL_CONNECTED){
-      WiFi.begin(WIFI_SSID, WIFI_PASSWORD);  
+      int time1 = (hour() * 3600) + (minute() * 60) + second();
+      
+      if (connect()) {
+          subscribe();
+      }
+      else if(WiFi.status() != WL_CONNECTED){
+      WiFi.begin(ssid, password);  
 
       Serial.print("와이파이 재연결 중");
     
@@ -138,20 +200,6 @@ void loop() {
       
       Serial.println("와이파이 재연결 성공!");
     }
-    
-    if(Firebase.failed()){
-      Firebase.begin(FIREBASE_HOST, FIREBASE_AUTH);
-    
-      Serial.println("파이어베이스 재연결 중");
-      
-      while(Firebase.failed()){
-        delay_time++;
-        Serial.print(".");
-        get_signal();
-      }
-      
-      Serial.println("파이어베이스 재연결 성공!");
-    }
 
     int time2 = (hour() * 3600) + (minute() * 60) + second();
 
@@ -161,7 +209,7 @@ void loop() {
     Serial.print(delay_time);
     Serial.println("(초)");
     pir_delay_time += delay_time;
-
+    
   }
 
 }
@@ -221,13 +269,6 @@ void button_check(){
       cancel_signal = 1;
       //부저 함수 추가
       
-    }else if(voice_emergency){
-      
-      Serial.println("음성 응급호출 취소");
-      voice_emergency = 0;
-      cancel_signal = 1;
-      //부저 함수 추가
-      
     }else{
       
       Serial.println("취소할 응급호출 신호가 존재하지 않습니다");
@@ -243,37 +284,43 @@ void button_check(){
 void send_signal(){  // 중요 - 모든 응급신호 10초간 대기하고 10초 안에 취소 버튼 누를경우 응급신호 보내지 않음
 
   if(entered == 1 && count == 0){
-    Firebase.setString("enter", "true");
-    Serial.println("파이어베이스 입장 데이터 전송");
+    
+    Serial.println("입장 데이터 전송");
     count++;
-    // handle error
-    if (Firebase.failed()) {
-      
-      Serial.print("출입상태 전송 오류 : ");
-      Serial.println(Firebase.error());  
-      count = 0;
-      
-    }else{
-      pir_value = 0;
-    }
+
+    MQTT::Message message;
+    char buf[100];
+    strcpy(buf, "{\"state\":{\"reported\":{\"enter\": true}, \"desired\":{\"enter\": true}}}");
+    message.qos = MQTT::QOS0;
+    message.retained = false;
+    message.dup = false;
+    message.payload = (void*)buf;
+    message.payloadlen = strlen(buf) + 1;
+    int rc = client->publish(aws_topic, message);
+    
+    pir_value = 0;
+    
   }
   
 
   if(entered == 2){
+
+    MQTT::Message message;
+    char buf[200];
+    strcpy(buf, "{\"state\":{\"reported\":{\"enter\": false,\"button\": false}, \"desired\":{\"enter\": false,\"button\": false}}}");
+    message.qos = MQTT::QOS0;
+    message.retained = false;
+    message.dup = false;
+    message.payload = (void*)buf;
+    message.payloadlen = strlen(buf) + 1;
+    int rc = client->publish(aws_topic, message);
+
+    Serial.println("퇴장 데이터 전송");
+
+    // 퇴장과 동시에 출입센서 초기화
+    entered = 0;
+    count = 0;
     
-    Firebase.setString("enter", "false");
-    Firebase.setString("button", "false");
-    Serial.println("파이어베이스 퇴장 데이터 전송");
-    // handle error
-    if (Firebase.failed()) {
-      
-      Serial.print("setting /number failed:");
-      Serial.println(Firebase.error());
-        
-    }else{ // 퇴장과 동시에 출입센서 초기화
-      entered = 0;
-      count = 0;
-    }
   }
 
   //버튼 전송 조건문 
@@ -285,19 +332,20 @@ void send_signal(){  // 중요 - 모든 응급신호 10초간 대기하고 10초
   if(emergency_time_now - emergency_time_start >= 5){ // 5초 이상 취소버튼 없을경우
     
     if(button_emergency == 1){
-      Firebase.setString("button", "true");
-      Serial.println("파이어베이스 응급호출버튼 데이터 전송");
 
-      if(Firebase.failed()){
-        Serial.print("setting /number failed:");
-        Serial.println(Firebase.error());
-      }else{
-        button_emergency = 0;
-      }
+      MQTT::Message message;
+      char buf[100];
+      strcpy(buf, "{\"state\":{\"reported\":{\"button\": true}, \"desired\":{\"button\": true}}}");
+      message.qos = MQTT::QOS0;
+      message.retained = false;
+      message.dup = false;
+      message.payload = (void*)buf;
+      message.payloadlen = strlen(buf) + 1;
+      int rc = client->publish(aws_topic, message);
       
-    }else if(voice_emergency == 1){
+      Serial.println("응급호출버튼 데이터 전송");
 
-      //음성응급호출
+      button_emergency = 0;
       
     }
     
@@ -306,11 +354,31 @@ void send_signal(){  // 중요 - 모든 응급신호 10초간 대기하고 10초
   in_time = (hour() * 3600) + (minute() * 60) + second() - enter_time;
 
   if(entered && in_time==1800){
-    Firebase.setString("thirty_mins", "true");
+      
+      MQTT::Message message;
+      char buf[100];
+      strcpy(buf, "{\"state\":{\"reported\":{\"thirty_mins\": true}, \"desired\":{\"thirty_mins\": true}}}");
+      message.qos = MQTT::QOS0;
+      message.retained = false;
+      message.dup = false;
+      message.payload = (void*)buf;
+      message.payloadlen = strlen(buf) + 1;
+      int rc = client->publish(aws_topic, message);
+      
   }
 
   if(entered && in_time==3600){
-    Firebase.setString("sixty_mins", "true");
+    
+      MQTT::Message message;
+      char buf[100];
+      strcpy(buf, "{\"state\":{\"reported\":{\"sixty_mins\": true}, \"desired\":{\"sixty_mins\": true}}}");
+      message.qos = MQTT::QOS0;
+      message.retained = false;
+      message.dup = false;
+      message.payload = (void*)buf;
+      message.payloadlen = strlen(buf) + 1;
+      int rc = client->publish(aws_topic, message);
+      
   }
   
 }
@@ -343,4 +411,111 @@ void get_signal(){
   Serial.print("button count before:");
   Serial.println(button_count);
   delay(500);
+}
+
+
+//connects to websocket layer and mqtt layer
+bool connect() {
+
+    if (client == NULL) {
+        client = new MQTT::Client<IPStack, Countdown, maxMQTTpackageSize, maxMQTTMessageHandlers>(ipstack);
+    }
+    else {
+
+        if (client->isConnected()) {
+            client->disconnect();
+        }
+        delete client;
+        client = new MQTT::Client<IPStack, Countdown, maxMQTTpackageSize, maxMQTTMessageHandlers>(ipstack);
+    }
+
+
+    //delay is not necessary... it just help us to get a "trustful" heap space value
+    delay(1000);
+    Serial.print(millis());
+    Serial.print(" - conn: ");
+    Serial.print(++connection);
+    Serial.print(" - (");
+    Serial.print(ESP.getFreeHeap());
+    Serial.println(")");
+
+
+
+
+    int rc = ipstack.connect(aws_endpoint, port);
+    Serial.print(rc);
+
+    if (rc != 1)
+    {
+        Serial.println("error connection to the websocket server");
+        return false;
+    }
+    else {
+        Serial.println("websocket layer connected");
+    }
+
+
+    Serial.println("MQTT connecting");
+    MQTTPacket_connectData data = MQTTPacket_connectData_initializer;
+    data.MQTTVersion = 3;
+    char* clientID = generateClientID();
+    data.clientID.cstring = clientID;
+    rc = client->connect(data);
+    delete[] clientID;
+    if (rc != 0)
+    {
+        Serial.print("error connection to MQTT server");
+        Serial.println(rc);
+        return false;
+    }
+    Serial.println("MQTT connected");
+    return true;
+}
+
+//subscribe to a mqtt topic
+void subscribe() {
+    //subscript to a topic
+    int rc = client->subscribe(aws_topic, MQTT::QOS0, messageArrived);
+    Serial.println(rc);
+    if (rc != 0) {
+        Serial.print("rc from MQTT subscribe is ");
+        Serial.println(rc);
+        return;
+    }
+    Serial.println("MQTT subscribed");
+}
+
+//reset a message to a mqtt topic
+void sendmessage() {
+    //send a message
+    MQTT::Message message;
+    char buf[500];
+    strcpy(buf, "{\"state\":{\"reported\":{\"enter\": false, \"button\": false, \"thirty_mins\": false, \"sixty_mins\": false}, \"desired\":{\"enter\": false, \"button\": false, \"thirty_mins\": false, \"sixty_mins\": false}}}");
+    message.qos = MQTT::QOS0;
+    message.retained = false;
+    message.dup = false;
+    message.payload = (void*)buf;
+    message.payloadlen = strlen(buf) + 1;
+    int rc = client->publish(aws_topic, message);
+}
+
+void setup_wifi() {
+
+    delay(10);
+    // We start by connecting to a WiFi network
+    Serial.println();
+    Serial.print("Connecting to ");
+    Serial.println(ssid);
+
+    WiFi.begin(ssid, password);
+
+    while (WiFi.status() != WL_CONNECTED) {
+        delay(500);
+        Serial.print(".");
+    }
+
+    Serial.println("");
+    Serial.println("WiFi connected");
+    Serial.println("IP address: ");
+    Serial.println(WiFi.localIP());
 }
