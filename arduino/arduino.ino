@@ -24,9 +24,8 @@
 
 
 //AWS IOT config, change these:
-//*******************************
 
-int port = 443;
+
 
 //MQTT config
 const int maxMQTTpackageSize = 512;
@@ -42,8 +41,6 @@ MQTT::Client<IPStack, Countdown, maxMQTTpackageSize, maxMQTTMessageHandlers> *cl
 
 //# of connections
 long connection = 0;
-
-
 
 //WeMos D1 R2
 // GPIO16 - D0
@@ -63,10 +60,8 @@ long connection = 0;
 #define pir_OUT D3 //D3 - GPIO0
 #define buzzer_IN D4 //D4 - GPIO2
 
-
-
 void inout_check(); // 출입감지 함수
-void send_signal(); // 파이어베이스 데이터 전송 함수
+void send_signal(); // AWS IoT Core 데이터 전송 함수
 void get_signal(); // 센서 데이터 가져오는 함수
 void button_check(); // 버튼 센싱 함수
 bool connect();
@@ -76,13 +71,11 @@ void setup_wifi();
 
 //void buzzer_out(int); // 부저 울리는 함수 (매개변수 0 : 취소알림소리, 1 : 응급상황알림소리, 2 : 입장알림소리)
 
-
-
 int entered = 0; // 표준 0, 들어감 1, 나감 2
 int count = 0; // 활동감지 횟수
 int button_emergency = 0; // 버튼호출 표준 0, 호출 1
 int cancel_signal = 0; // 표준 0, 응급호출 신호 취소 1 
-int pir_delay_time = 0; // 입장 시간
+int pir_delay_time = 0; // 퇴장 판단용 시간 (30초 이상 퇴장)
 int delay_time = 0; // 와이파이 접속 끊어진 시간
 
 int pir_value = 0; // pir 센서값
@@ -90,11 +83,12 @@ int button_value = 0; // 버튼 센서값
 int button_count = 0; // 버튼 클릭됐는지 확인
 int button_push_time = 0; // 버튼 눌린 시간
 
-int emergency_time_start = 0;
+int emergency_time_start = 0; // 응급 상황 발생
 int emergency_time_now = 0;
 
-int enter_time = 0;
+int enter_time = 0; // 입장 이후 경과 시간
 int in_time = 0;
+int before_time = 0; 
 
 //generate random mqtt clientID
 char* generateClientID() {
@@ -106,6 +100,7 @@ char* generateClientID() {
 
 //count messages arrived
 int arrivedcount = 0;
+
 
 //callback to handle mqtt messages
 void messageArrived(MQTT::MessageData& md)
@@ -129,6 +124,7 @@ void messageArrived(MQTT::MessageData& md)
     delete msg;
 }
 
+
 void setup() {
   
   // 센서 디지털 핀 모드 설정
@@ -137,23 +133,19 @@ void setup() {
   //pinMode(led_IN, OUTPUT);
   //pinMode(buzzer_IN, OUTPUT);
 
-  
   Serial.begin(115200);
-
 
   //와이파이 연결
   setup_wifi();
-
-
-  //파이어베이스 연결
   Serial.setDebugOutput(1);
-    
-  //fill AWS parameters    
+
+  //AWS parameters   
   awsWSclient.setAWSRegion(aws_region);
   awsWSclient.setAWSDomain(aws_endpoint);
   awsWSclient.setAWSKeyID(aws_key);
   awsWSclient.setAWSSecretKey(aws_secret);
 
+  // AWS 연결
   if (connect()) {
       subscribe();
       sendmessage();
@@ -173,10 +165,12 @@ void loop() {
   if (awsWSclient.connected() && WiFi.status() == WL_CONNECTED) {
     
       client->yield();     
+      Serial.println("===============================================");
       inout_check();
       get_signal();
       button_check();
       send_signal();
+      Serial.println("===============================================");
       
   }
   else {
@@ -204,11 +198,13 @@ void loop() {
     int time2 = (hour() * 3600) + (minute() * 60) + second();
 
     delay_time = time2 - time1;
-    
+
+    /*
     Serial.print("지연시간 : ");
     Serial.print(delay_time);
     Serial.println("(초)");
     pir_delay_time += delay_time;
+    */
     
   }
 
@@ -216,41 +212,36 @@ void loop() {
 
 
 
-void inout_check(){
+void inout_check(){ // (수정 예정)부저 추가하기
 
   pir_value = digitalRead(pir_OUT);
-
+  pir_delay_time = ((hour() * 3600) + (minute() * 60) + second()) - in_time; // 현재 - 입장시간 = 경과 시간
+  
   if(pir_value == 1 && count == 0){ // 들어오는 경우
     
     Serial.println("들어옴");
     entered = 1;
     pir_delay_time = 0;
     enter_time = (hour() * 3600) + (minute() * 60) + second();
-    //부저 함수 추가
+    in_time = enter_time;
     
   }else if(pir_value == 1 && count != 0){ // 안에서 움직이는 경우
     
     Serial.println("내부활동");
     count = 1;
-    pir_delay_time = 0;
+    in_time = ((hour() * 3600) + (minute() * 60) + second()); // 입장 시간 내부 활동시간으로 초기화 
     
   }else if(entered && pir_delay_time >= 30){ // 나가는 경우 (내부활동 30초 이상 없을경우)
     
     Serial.println("나감");
-    pir_delay_time = 0;
-    count = 0;
     entered = 2;
-    //입장시간 초기화
 
   }  
 
-  pir_delay_time++;
-  delay(1000);
 }
 
 
 void button_check(){
-
   
   if(button_count ==1 && button_push_time < 3){ // 일반적 응급호출 (최대 2.9초 까지 응급호출로 인식)
     
@@ -280,6 +271,7 @@ void button_check(){
   button_push_time = 0;
   
 }
+
 
 void send_signal(){  // 중요 - 모든 응급신호 10초간 대기하고 10초 안에 취소 버튼 누를경우 응급신호 보내지 않음
 
@@ -317,9 +309,12 @@ void send_signal(){  // 중요 - 모든 응급신호 10초간 대기하고 10초
 
     Serial.println("퇴장 데이터 전송");
 
-    // 퇴장과 동시에 출입센서 초기화
+    // 퇴장과 동시에 출입센서 변수 초기화
     entered = 0;
     count = 0;
+    pir_delay_time = 0;
+    enter_time = 0;
+    before_time = 0;
     
   }
 
@@ -350,10 +345,8 @@ void send_signal(){  // 중요 - 모든 응급신호 10초간 대기하고 10초
     }
     
   }
-
-  in_time = (hour() * 3600) + (minute() * 60) + second() - enter_time;
-
-  if(entered && in_time==1800){
+  
+  if(entered && enter_time==1800){
       
       MQTT::Message message;
       char buf[100];
@@ -367,7 +360,7 @@ void send_signal(){  // 중요 - 모든 응급신호 10초간 대기하고 10초
       
   }
 
-  if(entered && in_time==3600){
+  if(entered && enter_time==3600){
     
       MQTT::Message message;
       char buf[100];
@@ -381,36 +374,54 @@ void send_signal(){  // 중요 - 모든 응급신호 10초간 대기하고 10초
       
   }
   
+  if(enter_time > before_time){
+
+      MQTT::Message message;
+      String packet;
+      char* buf;
+
+      packet = "{\"state\":{\"reported\":{\"time\": " + String(enter_time) + "}, \"desired\":{\"time\": " + String(enter_time) + "}}}";
+
+      buf = (char*)packet.c_str();
+      
+      message.qos = MQTT::QOS0;
+      message.retained = false;
+      message.dup = false;
+      message.payload = (void*)buf;
+      message.payloadlen = strlen(buf) + 1;
+      int rc = client->publish(aws_topic, message);
+    
+  }
+  
+  before_time = enter_time; // 1초 단위에 한 번만 보낼 수 있도록 수정해야함
 }
+
 
 void get_signal(){
 
-  int value = 0;
-  int time1 = 0;
-  int time2 = 0;
-  
+  int time1 = 0; // 버튼 누름
+  int time2 = 0; // 버튼 뗌
+  button_push_time = 0;
+  button_count = 0;
   button_value = digitalRead(button_OUT);
 
-  time1 = second();
+  time1 = (hour()*3600) + (minute()*60) + second();
   
   if(button_value){
     button_count = 1;
     while(button_value!=0){
       button_value = digitalRead(button_OUT);
-      delay(20);
+      delay(50);    
     }
   }
 
-  time2 = second();
+  time2 = (hour()*3600) + (minute()*60) + second();
 
   button_push_time = time2 - time1;
 
-  Serial.print("button push time :");
+  Serial.print("버튼 눌린 시간 :");
   Serial.println(button_push_time);
-  
-  Serial.print("button count before:");
-  Serial.println(button_count);
-  delay(500);
+
 }
 
 
@@ -429,8 +440,6 @@ bool connect() {
         client = new MQTT::Client<IPStack, Countdown, maxMQTTpackageSize, maxMQTTMessageHandlers>(ipstack);
     }
 
-
-    //delay is not necessary... it just help us to get a "trustful" heap space value
     delay(1000);
     Serial.print(millis());
     Serial.print(" - conn: ");
@@ -438,9 +447,6 @@ bool connect() {
     Serial.print(" - (");
     Serial.print(ESP.getFreeHeap());
     Serial.println(")");
-
-
-
 
     int rc = ipstack.connect(aws_endpoint, port);
     Serial.print(rc);
@@ -454,12 +460,12 @@ bool connect() {
         Serial.println("websocket layer connected");
     }
 
-
     Serial.println("MQTT connecting");
     MQTTPacket_connectData data = MQTTPacket_connectData_initializer;
     data.MQTTVersion = 3;
     char* clientID = generateClientID();
     data.clientID.cstring = clientID;
+    
     rc = client->connect(data);
     delete[] clientID;
     if (rc != 0)
@@ -468,9 +474,11 @@ bool connect() {
         Serial.println(rc);
         return false;
     }
+    
     Serial.println("MQTT connected");
     return true;
 }
+
 
 //subscribe to a mqtt topic
 void subscribe() {
@@ -485,12 +493,13 @@ void subscribe() {
     Serial.println("MQTT subscribed");
 }
 
+
 //reset a message to a mqtt topic
 void sendmessage() {
     //send a message
     MQTT::Message message;
-    char buf[500];
-    strcpy(buf, "{\"state\":{\"reported\":{\"enter\": false, \"button\": false, \"thirty_mins\": false, \"sixty_mins\": false}, \"desired\":{\"enter\": false, \"button\": false, \"thirty_mins\": false, \"sixty_mins\": false}}}");
+    char buf[256];
+    strcpy(buf, "{\"state\":{\"reported\":{\"enter\": false, \"button\": false, \"thirty_mins\": false, \"sixty_mins\": false, \"time\": 0}, \"desired\":{\"enter\": false, \"button\": false, \"thirty_mins\": false, \"sixty_mins\": false, \"time\": 0}}}");
     message.qos = MQTT::QOS0;
     message.retained = false;
     message.dup = false;
@@ -498,6 +507,7 @@ void sendmessage() {
     message.payloadlen = strlen(buf) + 1;
     int rc = client->publish(aws_topic, message);
 }
+
 
 void setup_wifi() {
 
