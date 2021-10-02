@@ -27,6 +27,7 @@
 
 
 
+
 //MQTT config
 const int maxMQTTpackageSize = 512;
 const int maxMQTTMessageHandlers = 1;
@@ -86,9 +87,9 @@ int button_push_time = 0; // 버튼 눌린 시간
 int emergency_time_start = 0; // 응급 상황 발생
 int emergency_time_now = 0;
 
-int enter_time = 0; // 입장 이후 경과 시간
+int enter_time = 0; // 입장 시간
 int in_time = 0;
-int before_time = 0; 
+int during_time = 0; // 입장 이후 경과 시간
 
 //generate random mqtt clientID
 char* generateClientID() {
@@ -137,7 +138,7 @@ void setup() {
 
   //와이파이 연결
   setup_wifi();
-  Serial.setDebugOutput(1);
+  Serial.setDebugOutput(false);
 
   //AWS parameters   
   awsWSclient.setAWSRegion(aws_region);
@@ -151,9 +152,13 @@ void setup() {
       sendmessage();
   }
 
+ 
+  
+
   //센서초기화
   pir_value = 0; // pir 센서값
   button_value = 0; // 버튼 센서값
+  client->yield();   
   
   
 }
@@ -164,12 +169,18 @@ void loop() {
   //keep the mqtt up and running
   if (awsWSclient.connected() && WiFi.status() == WL_CONNECTED) {
     
-      client->yield();     
       Serial.println("===============================================");
+      client->yield();  
       inout_check();
       get_signal();
       button_check();
       send_signal();
+      Serial.print("entered_time : ");
+      Serial.println(enter_time);
+      Serial.print("during_time : ");
+      Serial.println(during_time);
+      Serial.print("pir_delay_time : ");
+      Serial.println(pir_delay_time);
       Serial.println("===============================================");
       
   }
@@ -180,7 +191,9 @@ void loop() {
       
       if (connect()) {
           subscribe();
+          Serial.println("AWS IoT Core 재연결");
       }
+      
       else if(WiFi.status() != WL_CONNECTED){
       WiFi.begin(ssid, password);  
 
@@ -190,10 +203,10 @@ void loop() {
         delay_time++;
         Serial.print("."); 
         get_signal();
+        }
+        Serial.println("");
+        Serial.println("와이파이 재연결 성공!");
       }
-      
-      Serial.println("와이파이 재연결 성공!");
-    }
 
     int time2 = (hour() * 3600) + (minute() * 60) + second();
 
@@ -209,7 +222,6 @@ void loop() {
   }
 
 }
-
 
 
 void inout_check(){ // (수정 예정)부저 추가하기
@@ -237,6 +249,12 @@ void inout_check(){ // (수정 예정)부저 추가하기
     entered = 2;
 
   }  
+
+  if(count == 1){
+        Serial.print("during_time in inout_check() : ");
+        Serial.println(during_time);
+        during_time = ((hour() * 3600) + (minute() * 60) + second()) - enter_time;
+  }
 
 }
 
@@ -280,15 +298,18 @@ void send_signal(){  // 중요 - 모든 응급신호 10초간 대기하고 10초
     Serial.println("입장 데이터 전송");
     count++;
 
+    //AWS IoT Core
     MQTT::Message message;
     char buf[100];
-    strcpy(buf, "{\"state\":{\"reported\":{\"enter\": true}, \"desired\":{\"enter\": true}}}");
+    strcpy(buf, "{\"state\":{\"reported\":{\"enter\":true},\"desired\":{\"enter\":true}}}");
     message.qos = MQTT::QOS0;
     message.retained = false;
     message.dup = false;
     message.payload = (void*)buf;
     message.payloadlen = strlen(buf) + 1;
     int rc = client->publish(aws_topic, message);
+    
+    Serial.println("입장 데이터 전송");
     
     pir_value = 0;
     
@@ -297,15 +318,10 @@ void send_signal(){  // 중요 - 모든 응급신호 10초간 대기하고 10초
 
   if(entered == 2){
 
-    MQTT::Message message;
-    char buf[200];
-    strcpy(buf, "{\"state\":{\"reported\":{\"enter\": false,\"button\": false}, \"desired\":{\"enter\": false,\"button\": false}}}");
-    message.qos = MQTT::QOS0;
-    message.retained = false;
-    message.dup = false;
-    message.payload = (void*)buf;
-    message.payloadlen = strlen(buf) + 1;
-    int rc = client->publish(aws_topic, message);
+    //AWS IoT Core
+    
+    sendmessage();
+    sendmessage();
 
     Serial.println("퇴장 데이터 전송");
 
@@ -314,29 +330,28 @@ void send_signal(){  // 중요 - 모든 응급신호 10초간 대기하고 10초
     count = 0;
     pir_delay_time = 0;
     enter_time = 0;
-    before_time = 0;
+    during_time = 0;
     
   }
 
   //버튼 전송 조건문 
   emergency_time_now = (hour()*3600) + (minute()*60) + second();
   
-  Serial.print("emergency_time_now:");
-  Serial.println(emergency_time_now);
-  
   if(emergency_time_now - emergency_time_start >= 5){ // 5초 이상 취소버튼 없을경우
     
     if(button_emergency == 1){
 
+      //AWS IoT Core
       MQTT::Message message;
       char buf[100];
-      strcpy(buf, "{\"state\":{\"reported\":{\"button\": true}, \"desired\":{\"button\": true}}}");
+      strcpy(buf, "{\"state\":{\"reported\":{\"button\": true},\"desired\":{\"button\":true}}}");
       message.qos = MQTT::QOS0;
       message.retained = false;
       message.dup = false;
       message.payload = (void*)buf;
       message.payloadlen = strlen(buf) + 1;
       int rc = client->publish(aws_topic, message);
+
       
       Serial.println("응급호출버튼 데이터 전송");
 
@@ -346,41 +361,47 @@ void send_signal(){  // 중요 - 모든 응급신호 10초간 대기하고 10초
     
   }
   
-  if(entered && enter_time==1800){
-      
+  if(entered && (during_time==1800 || during_time==1799 || during_time==1801)){
+
+      //AWS IoT Core
       MQTT::Message message;
       char buf[100];
-      strcpy(buf, "{\"state\":{\"reported\":{\"thirty_mins\": true}, \"desired\":{\"thirty_mins\": true}}}");
+      strcpy(buf, "{\"state\":{\"reported\":{\"thirty_mins\":true},\"desired\":{\"thirty_mins\":true}}}");
       message.qos = MQTT::QOS0;
       message.retained = false;
       message.dup = false;
       message.payload = (void*)buf;
       message.payloadlen = strlen(buf) + 1;
       int rc = client->publish(aws_topic, message);
+
+
       
   }
 
-  if(entered && enter_time==3600){
-    
+  if(entered && (during_time==3600 || during_time==3599 || during_time==3601)){
+
+      //AWS IoT Core
       MQTT::Message message;
       char buf[100];
-      strcpy(buf, "{\"state\":{\"reported\":{\"sixty_mins\": true}, \"desired\":{\"sixty_mins\": true}}}");
+      strcpy(buf, "{\"state\":{\"reported\":{\"sixty_mins\":true},\"desired\":{\"sixty_mins\":true}}}");
       message.qos = MQTT::QOS0;
       message.retained = false;
       message.dup = false;
       message.payload = (void*)buf;
       message.payloadlen = strlen(buf) + 1;
       int rc = client->publish(aws_topic, message);
-      
+
+
   }
   
-  if(enter_time > before_time){
-
+  if(entered == 1 && during_time % 5 == 0 && during_time != 0){ // 5초에 한 번
+      
+      //AWS IoT Core
       MQTT::Message message;
       String packet;
       char* buf;
-
-      packet = "{\"state\":{\"reported\":{\"time\": " + String(enter_time) + "}, \"desired\":{\"time\": " + String(enter_time) + "}}}";
+      
+      packet = "{\"state\":{\"reported\":{\"time\":" + String(during_time) + "},\"desired\":{\"time\":" + String(during_time) + "}}}";
 
       buf = (char*)packet.c_str();
       
@@ -390,10 +411,11 @@ void send_signal(){  // 중요 - 모든 응급신호 10초간 대기하고 10초
       message.payload = (void*)buf;
       message.payloadlen = strlen(buf) + 1;
       int rc = client->publish(aws_topic, message);
+
+
     
   }
   
-  before_time = enter_time; // 1초 단위에 한 번만 보낼 수 있도록 수정해야함
 }
 
 
@@ -498,8 +520,9 @@ void subscribe() {
 void sendmessage() {
     //send a message
     MQTT::Message message;
+    
     char buf[256];
-    strcpy(buf, "{\"state\":{\"reported\":{\"enter\": false, \"button\": false, \"thirty_mins\": false, \"sixty_mins\": false, \"time\": 0}, \"desired\":{\"enter\": false, \"button\": false, \"thirty_mins\": false, \"sixty_mins\": false, \"time\": 0}}}");
+    strcpy(buf, "{\"state\":{\"reported\":{\"enter\":false,\"button\":false,\"thirty_mins\":false,\"sixty_mins\":false,\"time\":0},\"desired\":{\"enter\":false,\"button\":false,\"thirty_mins\":false,\"sixty_mins\":false,\"time\":0}}}");
     message.qos = MQTT::QOS0;
     message.retained = false;
     message.dup = false;
