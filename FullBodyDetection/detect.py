@@ -1,75 +1,64 @@
 import cv2
-import mediapipe as mp
-import numpy as np
+import time
 
-mp_drawing = mp.solutions.drawing_utils
-mp_pose = mp.solutions.pose
+fitToEllipse = False
+cap = cv2.VideoCapture('FALL-Backwards_.mp4')
+time.sleep(2)
 
-# For webcam input:
-cap = cv2.VideoCapture('FALL-Backwards_.mp4') #webcam 쓸땐 0
+fgbg = cv2.createBackgroundSubtractorMOG2()
+j = 0
 
-with mp_pose.Pose(
-    min_detection_confidence=0.5,
-    min_tracking_confidence=0.5) as pose:
-
-  while cap.isOpened():
-    success, image = cap.read()
-    if not success:
-      print("Ignoring empty camera frame.")
-      # If loading a video, use 'break' instead of 'continue'.
-      continue
-
-    # Flip the image horizontally for a later selfie-view display, and convert
-    # the BGR image to RGB.
-    image = cv2.cvtColor(cv2.flip(image, 1), cv2.COLOR_BGR2RGB)
-
-    # To improve performance, optionally mark the image as not writeable to
-    # pass by reference.
-    image.flags.writeable = False
-    results = pose.process(image)
-
-    # Draw the pose annotation on the image.
-    image.flags.writeable = True
-    image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-
+while(1):
+    ret, frame = cap.read()
     
-    mp_drawing.draw_landmarks(
-        image, results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
-    cv2.imshow('MediaPipe Pose', image)
+    #Convert each frame to gray scale and subtract the background
+    try:
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        fgmask = fgbg.apply(gray)
+        
+        #Find contours
+        contours, _ = cv2.findContours(fgmask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
-    def calculate(a,b,c):
-      a = np.array(a)
-      b = np.array(b)
-      c = np.array(c)
+        if contours:
+        
+            # List to hold all areas
+            areas = []
 
-      d1 = abs(a[0]-b[0])
-      d2 = abs(a[0]-c[0])
+            for contour in contours:
+                ar = cv2.contourArea(contour)
+                areas.append(ar)
+            
+            max_area = max(areas, default = 0)
 
-      if d1>100 or d2>100:
-          length = 0
-      else :
-          length = 1
+            max_area_index = areas.index(max_area)
 
-      return length
+            cnt = contours[max_area_index]
 
-    try :
-      landmarks = results.pose_landmarks.landmark
-      nose = [landmarks[mp_pose.PoseLandmark.NOSE.value].x,landmarks[mp_pose.PoseLandmark.NOSE.value].y]
-      left_foot = [landmarks[mp_pose.PoseLandmark.LEFT_FOOT_INDEX.value].x,landmarks[mp_pose.PoseLandmark.LEFT_FOOT_INDEX.value].y]
-      right_foot = [landmarks[mp_pose.PoseLandmark.RIGHT_FOOT_INDEX.value].x,landmarks[mp_pose.PoseLandmark.RIGHT_FOOT_INDEX.value].y]
+            M = cv2.moments(cnt)
+            
+            x, y, w, h = cv2.boundingRect(cnt)
 
-      length = calculate(nose, left_foot, right_foot)
+            cv2.drawContours(fgmask, [cnt], 0, (255,255,255), 3, maxLevel = 0)
+            
+            if h < w:
+                j += 1
+                
+            if j > 10:
+                print("FALL")
+                cv2.putText(fgmask, 'FALL', (x, y), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (255,255,255), 2)
+                cv2.rectangle(frame,(x,y),(x+w,y+h),(0,0,255),2)
 
-      if length == 0:
-            cv2.putText(image, text='State:dangerous')
-      else:
-            cv2.putText(image, text='State:safety')        
-    except:
-      pass
+            if h > w:
+                j = 0 
+                cv2.rectangle(frame,(x,y),(x+w,y+h),(0,255,0),2)
 
-    if cv2.waitKey(5) & 0xFF == 27:
-      break
 
-  cap.release()
+            cv2.imshow('video', frame)
+        
+            if cv2.waitKey(1) == ord('q'):
+             break
+    except Exception as e:
+        break
+cv2.destroyAllWindows()
 
 
