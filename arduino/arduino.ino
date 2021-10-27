@@ -26,8 +26,6 @@
 //AWS IOT config, change these:
 
 
-
-
 //MQTT config
 const int maxMQTTpackageSize = 512;
 const int maxMQTTMessageHandlers = 1;
@@ -253,7 +251,7 @@ void inout_check(){ // (수정 예정)부저 추가하기
   if(count == 1){
         Serial.print("during_time in inout_check() : ");
         Serial.println(during_time);
-        during_time = ((hour() * 3600) + (minute() * 60) + second()) - enter_time;
+        during_time = ((hour() * 3600) + (minute() * 60) + second()) - enter_time; // 3590
   }
 
 }
@@ -360,8 +358,8 @@ void send_signal(){  // 중요 - 모든 응급신호 10초간 대기하고 10초
     }
     
   }
-  
-  if(entered && (during_time==1800 || during_time==1799 || during_time==1801)){
+
+  if(entered && (during_time==1800 || during_time==1799 || during_time==1801)){ //30분
 
       //AWS IoT Core
       MQTT::Message message;
@@ -374,11 +372,24 @@ void send_signal(){  // 중요 - 모든 응급신호 10초간 대기하고 10초
       message.payloadlen = strlen(buf) + 1;
       int rc = client->publish(aws_topic, message);
 
-
-      
   }
 
-  if(entered && (during_time==3600 || during_time==3599 || during_time==3601)){
+    if(entered && (during_time==2700 || during_time==2699 || during_time==2701)){ //45분
+
+      //AWS IoT Core
+      MQTT::Message message;
+      char buf[100];
+      strcpy(buf, "{\"state\":{\"reported\":{\"forty_mins\":true},\"desired\":{\"forty_mins\":true}}}");
+      message.qos = MQTT::QOS0;
+      message.retained = false;
+      message.dup = false;
+      message.payload = (void*)buf;
+      message.payloadlen = strlen(buf) + 1;
+      int rc = client->publish(aws_topic, message);
+
+  }
+
+  if(entered && (during_time==3600 || during_time==3599 || during_time==3601)){ //60분
 
       //AWS IoT Core
       MQTT::Message message;
@@ -391,9 +402,41 @@ void send_signal(){  // 중요 - 모든 응급신호 10초간 대기하고 10초
       message.payloadlen = strlen(buf) + 1;
       int rc = client->publish(aws_topic, message);
 
-
   }
   
+  if(entered && (during_time==5400 || during_time==5399 || during_time==5401)){ // 90분
+
+      //AWS IoT Core
+      MQTT::Message message;
+      char buf[100];
+      strcpy(buf, "{\"state\":{\"reported\":{\"ninety_mins\":true},\"desired\":{\"ninety_mins\":true}}}");
+      message.qos = MQTT::QOS0;
+      message.retained = false;
+      message.dup = false;
+      message.payload = (void*)buf;
+      message.payloadlen = strlen(buf) + 1;
+      int rc = client->publish(aws_topic, message);
+   
+  }
+
+    if(entered && (during_time==7200 || during_time==7199 || during_time==7201)){ // 120분
+
+      //AWS IoT Core
+      MQTT::Message message;
+      char buf[100];
+      strcpy(buf, "{\"state\":{\"reported\":{\"hundred_mins\":true},\"desired\":{\"hundred_mins\":true}}}");
+      message.qos = MQTT::QOS0;
+      message.retained = false;
+      message.dup = false;
+      message.payload = (void*)buf;
+      message.payloadlen = strlen(buf) + 1;
+      int rc = client->publish(aws_topic, message);
+   
+  }
+
+
+  
+  /*
   if(entered == 1 && during_time % 5 == 0 && during_time != 0){ // 5초에 한 번
       
       //AWS IoT Core
@@ -415,6 +458,7 @@ void send_signal(){  // 중요 - 모든 응급신호 10초간 대기하고 10초
 
     
   }
+  */
   
 }
 
@@ -521,8 +565,10 @@ void sendmessage() {
     //send a message
     MQTT::Message message;
     
-    char buf[256];
-    strcpy(buf, "{\"state\":{\"reported\":{\"enter\":false,\"button\":false,\"thirty_mins\":false,\"sixty_mins\":false,\"time\":0},\"desired\":{\"enter\":false,\"button\":false,\"thirty_mins\":false,\"sixty_mins\":false,\"time\":0}}}");
+    char buf[512];
+    strcpy(buf, "{\"state\":{\"reported\":{\"enter\":false,\"button\":false,\"thirty_mins\":false,\"forty_mins\":false,\"sixty_mins\":false,\"ninety_mins\":false,\"hundred_mins\":false},\"desired\":{\"enter\":false,\"button\":false,\"thirty_mins\":false,\"forty_mins\":false,\"sixty_mins\":false,\"ninety_mins\":false,\"hundred_mins\":false}}}");
+    //30분,60분,45분,90분,120
+    
     message.qos = MQTT::QOS0;
     message.retained = false;
     message.dup = false;
