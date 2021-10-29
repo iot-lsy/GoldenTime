@@ -26,6 +26,7 @@
 //AWS IOT config, change these:
 
 
+
 //MQTT config
 const int maxMQTTpackageSize = 512;
 const int maxMQTTMessageHandlers = 1;
@@ -81,6 +82,7 @@ int button_push_time = 0; // 버튼 눌린 시간
 
 int emergency_time_start = 0; // 응급 상황 발생
 int emergency_time_now = 0;
+int emergency_state = 0; // 응급상황 데이터 전송 이후 1로 초기화, 이후 최초 움직임 감지 시 0 
 
 int enter_time = 0; // 입장 시간
 int in_time = 0;
@@ -217,32 +219,42 @@ void inout_check(){ // (수정 예정)부저 추가하기
   pir_delay_time = ((hour() * 3600) + (minute() * 60) + second()) - in_time; // 현재 - 입장시간 = 경과 시간
 
   get_button();
-  if(pir_value == 1 && count == 0){ // 들어오는 경우
 
-    Serial.println("들어옴");
-    entered = 1;
-    pir_delay_time = 0;
-    enter_time = (hour() * 3600) + (minute() * 60) + second();
-    in_time = enter_time;
-    
-  }else if(pir_value == 1 && count != 0){ // 안에서 움직이는 경우
-    
-    Serial.println("내부활동");
-    count = 1;
-    in_time = ((hour() * 3600) + (minute() * 60) + second()); // 입장 시간 내부 활동시간으로 초기화 
-    
-  }else if(entered && pir_delay_time >= 30){ // 나가는 경우 (내부활동 30초 이상 없을경우)
-    
-    Serial.println("나감");
-    entered = 2;
+  if(emergency_state == 0){ // 평상시
+    if(pir_value == 1 && count == 0){ // 들어오는 경우
 
-  }  
+      Serial.println("들어옴");
+      entered = 1;
+      pir_delay_time = 0;
+      enter_time = (hour() * 3600) + (minute() * 60) + second();
+      in_time = enter_time;
+    
+    }else if(pir_value == 1 && count != 0){ // 안에서 움직이는 경우
+    
+      Serial.println("내부활동");
+      count = 1;
+      in_time = ((hour() * 3600) + (minute() * 60) + second()); // 입장 시간 내부 활동시간으로 초기화 
+    
+    }else if(entered && pir_delay_time >= 30){ // 나가는 경우 (내부활동 30초 이상 없을경우)
+    
+      Serial.println("나감");
+      entered = 2;
+
+    }  
+  }else{ // 응급상황 데이터 전송 이후
+    if(pir_value == 1){
+      entered = 2;
+      emergency_state = 0;
+    }else if(during_time-emergency_time_start >= 1200){ // 응급상황 발생 후 20분 지난 상황
+      // 추가적인 알림?
+    }
+  }
   
   get_button();
   if(count == 1){
         Serial.print("during_time in inout_check() : ");
         Serial.println(during_time);
-        during_time = ((hour() * 3600) + (minute() * 60) + second()) - enter_time; // 3590
+        during_time = ((hour() * 3600) + (minute() * 60) + second()) - enter_time;
   }
 
 }
@@ -322,6 +334,8 @@ void send_signal(){  // 중요 - 모든 응급신호 10초간 대기하고 10초
     pir_delay_time = 0;
     enter_time = 0;
     during_time = 0;
+    emergency_time_now = 0;
+    emergency_time_start = 0;
     digitalWrite(led_IN, LOW);
     
   }
@@ -347,6 +361,9 @@ void send_signal(){  // 중요 - 모든 응급신호 10초간 대기하고 10초
 
       
       Serial.println("응급호출버튼 데이터 전송");
+
+      //퇴장시간 20분으로 연장
+      emergency_state = 1;
       
       digitalWrite(led_IN, LOW);
       button_emergency = 0;
