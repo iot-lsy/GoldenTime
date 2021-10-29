@@ -1,0 +1,356 @@
+[33mcommit 3bbf8c2aee17934d7943f5a51cd1c58f947bae04[m[33m ([m[1;36mHEAD -> [m[1;32marduino[m[33m, [m[1;31morigin/arduino[m[33m)[m
+Author: 이소용 <dlthfyd708@naver.com>
+Date:   Wed Oct 27 23:41:31 2021 +0900
+
+    수정 - 30,45,60,90,120분 전송
+
+[33mcommit b96eea2a707aa83fdc35b8638122ced1d720ad10[m
+Author: 이소용 <dlthfyd708@naver.com>
+Date:   Sat Oct 2 23:56:04 2021 +0900
+
+    수정 - 버튼 딜레이 감소, 퇴장시 초기화 안되는 버그 수정, 5초 단위로 내부 활동 시간 업데이트
+
+[33mcommit 1caa8efba525e14e6157a57b294cb38094351dab[m
+Author: 이소용 <dlthfyd708@naver.com>
+Date:   Wed Sep 29 01:19:25 2021 +0900
+
+    수정 - delay 조절, 입장이후 경과시간 데이터 전송
+
+[33mcommit 8567e47bf2d4df111866f4fbd5db31f7aac52722[m
+Author: 이소용 <dlthfyd708@naver.com>
+Date:   Wed Sep 22 00:34:03 2021 +0900
+
+    수정 - AWS IoT CORE 연동
+
+[33mcommit 0df1e625ef68b89586d4a23f81412a4ce51a1b8c[m
+Author: 이소용 <dlthfyd708@naver.com>
+Date:   Fri Sep 3 22:40:07 2021 +0900
+
+    수정 - 응급호출, 취소 버튼 기능 버그 수정, 30분 60분 시간 전송 구현
+
+[33mcommit 02ed10bed6ecae96d46c73b62b117760b1469485[m
+Author: 이소용 <dlthfyd708@naver.com>
+Date:   Fri Sep 3 18:13:19 2021 +0900
+
+    수정 - 응급호출, 취소 버튼 기능구현
+
+[33mcommit b384822f6e5b513fca99ddca09675dae472f37a7[m
+Author: 이소용 <dlthfyd708@naver.com>
+Date:   Fri Sep 3 16:44:25 2021 +0900
+
+    수정 - setup() 수정, WeMos D1 R2 변경에 따른 핀맵 수정
+
+[33mcommit 25434bb931009d7f7095ac5a94576c69e71ca698[m
+Author: 이소용 <dlthfyd708@naver.com>
+Date:   Sat Aug 28 21:17:42 2021 +0900
+
+    추가 - 이전 커밋 기능 보완
+
+[33mcommit f5a9b90c9bc0ead22819c9f81a9a7c282ee49dad[m
+Author: 이소용 <dlthfyd708@naver.com>
+Date:   Sat Aug 28 16:03:03 2021 +0900
+
+    추가 - 출입센서 파이어베이스 데이터 전송 기능 구현
+
+[33mcommit c8443ae1aa7e3808e874adcf7fdd294641bdadb6[m
+Author: 이소용 <dlthfyd708@naver.com>
+Date:   Sat Aug 28 14:57:57 2021 +0900
+
+    추가 - 와이파이, 파이어베이스 연결끊긴 시간 측정 기능 추가
+
+[33mcommit 461c0b4c26dc4fc3bea073d386244bbdcd045a17[m
+Author: 이소용 <dlthfyd708@naver.com>
+Date:   Sat Aug 28 14:38:43 2021 +0900
+
+    추가 - 버튼, 인체감지 기능 구현
+
+[33mcommit 44aafccc2743f0e1ae4760d54611557f7a0a7c71[m
+Author: 이소용 <dlthfyd708@naver.com>
+Date:   Sat Aug 28 01:28:02 2021 +0900
+
+    아두이노 브랜치 생성
+
+[33mcommit 169e9c4c8e8891ab107dc97b4b063626903fa37e[m[33m ([m[1;32mmaster[m[33m)[m
+Author: 이소용 <dlthfyd708@naver.com>
+Date:   Sat Aug 28 01:26:27 2021 +0900
+
+    수정 - 아두이노 연결방식 와이파이로 변경 (파이어베이스 접속 기능 구현)
+
+[33mcommit 2ce6806da29967ba7eda1920dc56188fb333b8b0[m
+Author: iot-lsy <suwonbank@gmail.com>
+Date:   Wed Aug 4 20:00:32 2021 +0900
+
+    버튼, 음성 응급호출 데이터 전송값 구분
+
+[33mcommit 4edfaddcbc298e0c4cd2f091e68ac56e0f3c1226[m
+Author: 나민지 <nared0407@naver.com>
+Date:   Tue Aug 3 22:18:42 2021 +0900
+
+    Update main1.py.py
+
+[33mcommit 38a02367d76c2284b559392208cca39aa8f686b2[m
+Author: 나민지 <nared0407@naver.com>
+Date:   Tue Aug 3 22:18:12 2021 +0900
+
+    새 파일 업로드
+
+[33mcommit 2330a193d99dcf92528b591f57f967cf24db8323[m
+Author: 나민지 <nared0407@naver.com>
+Date:   Tue Aug 3 22:17:11 2021 +0900
+
+    Delete mnist.py
+
+[33mcommit 389a02126105ddc0b2c5d1c2e4da8fff0e274eb0[m
+Author: 나민지 <nared0407@naver.com>
+Date:   Tue Aug 3 22:17:04 2021 +0900
+
+    Delete cam.py
+
+[33mcommit 20a6e220676246998d5166f3457827b4b718be93[m
+Author: 나민지 <nared0407@naver.com>
+Date:   Tue Aug 3 22:16:13 2021 +0900
+
+    새 디렉토리 추가
+
+[33mcommit 15eb22f5a2556e3d3c8ec58cb610215a13f5f80f[m
+Author: 나민지 <nared0407@naver.com>
+Date:   Mon Aug 2 03:51:00 2021 +0900
+
+    새 파일 업로드
+
+[33mcommit b412c9b687b49184b2e66a56ea89b7c8cee3304a[m
+Author: 나민지 <nared0407@naver.com>
+Date:   Mon Aug 2 03:50:34 2021 +0900
+
+    새 파일 업로드
+
+[33mcommit e287c574b516174f3393605462109ad48714eeaf[m
+Author: 나민지 <nared0407@naver.com>
+Date:   Mon Aug 2 03:50:00 2021 +0900
+
+    새 파일 업로드
+
+[33mcommit 1781197873d839da641d9a667705c103670f7717[m
+Author: 나민지 <nared0407@naver.com>
+Date:   Sun Aug 1 15:11:36 2021 +0900
+
+    Update README.md
+
+[33mcommit e6db6ca18d9540a7c6d3a43c74056b96e856b71e[m
+Merge: 3e66a92 f8516bf
+Author: 이소용 <dlthfyd708@naver.com>
+Date:   Wed Jul 28 15:33:59 2021 +0900
+
+    Merge branch 'arduino' into 'master'
+    
+    음성인식 제외 기능 구현 완료
+    
+    See merge request 21_PI005/21_pi005!8
+
+[33mcommit f8516bfd238e853f848116b8a436780f1c1560ed[m
+Author: 이소용 <dlthfyd708@naver.com>
+Date:   Wed Jul 28 15:21:47 2021 +0900
+
+    블루투스 오류해결
+
+[33mcommit 2ce2d882b98a16945eea9cac7df44a5bb1d45c4b[m
+Author: 이소용 <dlthfyd708@naver.com>
+Date:   Wed Jul 28 00:53:19 2021 +0900
+
+    전반적 수정
+
+[33mcommit 4fac32842a7bd908b6ad16a13b63bb2e57daefe4[m
+Author: 이소용 <dlthfyd708@naver.com>
+Date:   Tue Jul 27 23:35:38 2021 +0900
+
+    블루투스 연결
+
+[33mcommit 3e66a9226db84ae3936b26d664058ff7767e2c36[m
+Author: 이소용 <dlthfyd708@naver.com>
+Date:   Mon Jul 26 23:56:24 2021 +0900
+
+    블루투스 제외 기능 완성
+
+[33mcommit 04ac1a75b269cff957f1c4246af05a7c5d0b8279[m
+Author: 이소용 <dlthfyd708@naver.com>
+Date:   Sat Jul 24 14:40:12 2021 +0900
+
+    README추가
+
+[33mcommit 1a091859909b78606a7481c4c636649d1d665a39[m
+Author: 이소용 <dlthfyd708@naver.com>
+Date:   Sat Jul 24 13:23:31 2021 +0900
+
+    모션인식 초기
+
+[33mcommit c8b7eaf2639655d85c3d1898517c0563237760fd[m
+Author: 이소용 <dlthfyd708@naver.com>
+Date:   Sat Jul 24 13:22:52 2021 +0900
+
+    probonoApp 디렉토리 수정
+
+[33mcommit 8853fd8ee7879be3bc5eccc1b5caedb33dee3155[m
+Author: 성나영 <na3150@gmail.com>
+Date:   Sat Jul 24 12:13:51 2021 +0900
+
+    Delete COMMIT_EDITMSG
+
+[33mcommit a3a55dd609380483e23dde8d0123657ef439a537[m
+Author: 성나영 <na3150@gmail.com>
+Date:   Sat Jul 24 12:13:23 2021 +0900
+
+    새 파일 업로드
+
+[33mcommit ef9ec1747afd7075123b648fd8946275ce0fb505[m
+Author: 성나영 <na3150@gmail.com>
+Date:   Sat Jul 24 12:12:04 2021 +0900
+
+    새 디렉토리 추가
+
+[33mcommit 1cf708c057770b2484b2919304723ccb9408bc52[m
+Merge: 00c33bd 2d74fe2
+Author: 성나영 <na3150@gmail.com>
+Date:   Sat Jul 24 12:06:06 2021 +0900
+
+    Merge branch 'probonoApp' into 'master'
+    
+    Probono app
+    
+    See merge request 21_PI005/21_pi005!6
+
+[33mcommit 00c33bd74a3d8e0a2bf194f79db0cd0e257395b8[m
+Merge: ab96b68 023f605
+Author: 이소용 <dlthfyd708@naver.com>
+Date:   Sat Jul 24 00:25:18 2021 +0900
+
+    Merge branch 'arduino' into 'master'
+    
+    모션인식 초기상태
+    
+    See merge request 21_PI005/21_pi005!5
+
+[33mcommit 023f605160ae8fb4a876f9c56e9c02aea6aca504[m
+Author: 이소용 <dlthfyd708@naver.com>
+Date:   Sat Jul 24 00:21:53 2021 +0900
+
+    모션인식 초기상태
+
+[33mcommit 2d74fe2638b625be2a0e4270dab22571202052cc[m
+Author: 성나영 <na3150@gmail.com>
+Date:   Fri Jul 23 23:33:13 2021 +0900
+
+    계정 메뉴 변경(activity 생성 완료)
+
+[33mcommit 44e201e722a2faabe0958ae0650d9d5a30c12a59[m
+Author: 성나영 <na3150@gmail.com>
+Date:   Fri Jul 23 22:47:34 2021 +0900
+
+    소개페이지 완성, 로그아웃페이지 약간 수정(이모지 추가)
+
+[33mcommit bdec79b2f0097a744e7d99772ff1c3919f9f6903[m
+Author: [유저 아이디] <[oswzxc@naver.com]>
+Date:   Fri Jul 23 16:08:25 2021 +0900
+
+    hello
+
+[33mcommit ab96b68f011a03ee404db4e313daf45826991794[m
+Author: 이소용 <dlthfyd708@naver.com>
+Date:   Fri Jul 23 14:52:51 2021 +0900
+
+    Delete .DS_Store
+
+[33mcommit 486042224928cbbb358b8829652ec05380bfc245[m
+Author: 이소용 <dlthfyd708@naver.com>
+Date:   Fri Jul 23 14:51:38 2021 +0900
+
+    적외선 센서 예외처리
+
+[33mcommit ff9c8c8842a907050ffc3231475246a9930dd875[m
+Merge: ba8a64d 97152a8
+Author: 이소용 <dlthfyd708@naver.com>
+Date:   Thu Jul 22 20:44:12 2021 +0900
+
+    Merge branch 'arduino' into 'master'
+    
+    add branch : arduino
+    
+    See merge request 21_PI005/21_pi005!4
+
+[33mcommit ba8a64d3d8e894373045d2a52cf9badd5819ff4b[m
+Author: 이소용 <dlthfyd708@naver.com>
+Date:   Thu Jul 22 20:41:10 2021 +0900
+
+    변수 수정
+
+[33mcommit 97152a85cb8763b2e5aefc9b6e2fbf7901b75dbc[m
+Author: 이소용 <dlthfyd708@naver.com>
+Date:   Thu Jul 22 17:23:29 2021 +0900
+
+    add branch : arduino
+
+[33mcommit fec1ca3fffb6978280931fd50e9d8a5ecc53d21a[m
+Author: 이소용 <dlthfyd708@naver.com>
+Date:   Sat Jul 17 22:26:49 2021 +0900
+
+    loop() 수정
+
+[33mcommit 21c6a5a02ecd6baeb32a0651675b79a2b3afa30a[m
+Author: 이소용 <dlthfyd708@naver.com>
+Date:   Sat Jul 17 21:06:07 2021 +0900
+
+    초기상태
+
+[33mcommit 846e0e08f6fb635853ebde8a512e3a25494f4f9b[m
+Author: 이소용 <dlthfyd708@naver.com>
+Date:   Sat Jul 17 20:59:23 2021 +0900
+
+    Delete flowchart.png
+
+[33mcommit 3cd98826aa246e8f1e7d87ada02a42a860f4390c[m
+Author: 이소용 <dlthfyd708@naver.com>
+Date:   Sat Jul 17 20:59:17 2021 +0900
+
+    새 디렉토리 추가
+
+[33mcommit e4f4ef5c4fdd8cf0da029752cfbd06195da9d512[m
+Author: 이소용 <dlthfyd708@naver.com>
+Date:   Sat Jul 17 20:58:58 2021 +0900
+
+    flowchart
+
+[33mcommit bdf28b0fa8def70f6131973ea449ab42b4e5f112[m
+Author: 이소용 <dlthfyd708@naver.com>
+Date:   Sat Jul 17 20:58:31 2021 +0900
+
+    새 디렉토리 추가
+
+[33mcommit 87542eebed9c980a48d5b25ae49533e315498985[m
+Merge: 09743d9 afa7ae6
+Author: 이소용 <dlthfyd708@naver.com>
+Date:   Sat Jul 17 20:48:29 2021 +0900
+
+    초기상태
+
+[33mcommit 09743d97e7bf05cc38da39d9a9fc427d37ef99f3[m
+Author: 이소용 <dlthfyd708@naver.com>
+Date:   Sat Jul 17 20:44:55 2021 +0900
+
+    초기상태
+
+[33mcommit afa7ae668b8df2757ceb2cca9f9cb88b46a6e37d[m
+Author: iot-lsy <suwonbank@gmail.com>
+Date:   Sat Jul 17 20:13:55 2021 +0900
+
+    loop수정
+
+[33mcommit 368a18ecc9accb54ca68fe3f61f05b3d9ac64ed4[m
+Author: 이소용 <dlthfyd708@naver.com>
+Date:   Sat Jul 17 20:09:03 2021 +0900
+
+    아두이노 초기
+
+[33mcommit 82142b1028bf96ef269bb747dfeb25852cf5b332[m
+Author: 성나영 <na3150@gmail.com>
+Date:   Tue Jul 13 20:51:57 2021 +0900
+
+    앱 초기상태

@@ -57,18 +57,15 @@ long connection = 0;
 #define led_IN D1 //D1 - GPIO5
 #define button_OUT D2 //D2 - GPIO4
 #define pir_OUT D3 //D3 - GPIO0
-#define buzzer_IN D4 //D4 - GPIO2
 
 void inout_check(); // 출입감지 함수
 void send_signal(); // AWS IoT Core 데이터 전송 함수
-void get_signal(); // 센서 데이터 가져오는 함수
+void get_button(); // 버튼 데이터 가져오는 함수
 void button_check(); // 버튼 센싱 함수
 bool connect();
 void subscribe();
 void sendmessage();
 void setup_wifi();
-
-//void buzzer_out(int); // 부저 울리는 함수 (매개변수 0 : 취소알림소리, 1 : 응급상황알림소리, 2 : 입장알림소리)
 
 int entered = 0; // 표준 0, 들어감 1, 나감 2
 int count = 0; // 활동감지 횟수
@@ -129,11 +126,12 @@ void setup() {
   // 센서 디지털 핀 모드 설정
   pinMode(pir_OUT, INPUT);
   pinMode(button_OUT, INPUT);
-  //pinMode(led_IN, OUTPUT);
-  //pinMode(buzzer_IN, OUTPUT);
+  pinMode(led_IN, OUTPUT);
 
   Serial.begin(115200);
 
+  digitalWrite(led_IN, LOW);
+ 
   //와이파이 연결
   setup_wifi();
   Serial.setDebugOutput(false);
@@ -150,14 +148,9 @@ void setup() {
       sendmessage();
   }
 
- 
-  
-
   //센서초기화
   pir_value = 0; // pir 센서값
   button_value = 0; // 버튼 센서값
-  client->yield();   
-  
   
 }
 
@@ -168,9 +161,10 @@ void loop() {
   if (awsWSclient.connected() && WiFi.status() == WL_CONNECTED) {
     
       Serial.println("===============================================");
-      client->yield();  
+      client->yield();
+      get_button();
       inout_check();
-      get_signal();
+      get_button();
       button_check();
       send_signal();
       Serial.print("entered_time : ");
@@ -198,9 +192,7 @@ void loop() {
       Serial.print("와이파이 재연결 중");
     
       while(WiFi.status() != WL_CONNECTED){
-        delay_time++;
         Serial.print("."); 
-        get_signal();
         }
         Serial.println("");
         Serial.println("와이파이 재연결 성공!");
@@ -210,15 +202,12 @@ void loop() {
 
     delay_time = time2 - time1;
 
-    /*
     Serial.print("지연시간 : ");
     Serial.print(delay_time);
     Serial.println("(초)");
     pir_delay_time += delay_time;
-    */
     
   }
-
 }
 
 
@@ -226,9 +215,10 @@ void inout_check(){ // (수정 예정)부저 추가하기
 
   pir_value = digitalRead(pir_OUT);
   pir_delay_time = ((hour() * 3600) + (minute() * 60) + second()) - in_time; // 현재 - 입장시간 = 경과 시간
-  
+
+  get_button();
   if(pir_value == 1 && count == 0){ // 들어오는 경우
-    
+
     Serial.println("들어옴");
     entered = 1;
     pir_delay_time = 0;
@@ -247,7 +237,8 @@ void inout_check(){ // (수정 예정)부저 추가하기
     entered = 2;
 
   }  
-
+  
+  get_button();
   if(count == 1){
         Serial.print("during_time in inout_check() : ");
         Serial.println(during_time);
@@ -259,12 +250,12 @@ void inout_check(){ // (수정 예정)부저 추가하기
 
 void button_check(){
   
-  if(button_count ==1 && button_push_time < 3){ // 일반적 응급호출 (최대 2.9초 까지 응급호출로 인식)
+  if(button_count == 1 && button_push_time < 3){ // 일반적 응급호출 (최대 2.9초 까지 응급호출로 인식)
     
     button_emergency = 1;
     emergency_time_start = (hour()*3600) + (minute()*60) + second();
     Serial.println("버튼 응급호출");
-    
+    digitalWrite(led_IN, HIGH);
     //부저 함수 추가
     
   }else if(button_count == 1 && button_push_time >= 3){ // 모든 응급호출 취소 버튼 (버튼 3초 이상 누른경우)
@@ -272,6 +263,7 @@ void button_check(){
     if(button_emergency){
       
       Serial.println("버튼 응급호출 취소");
+      digitalWrite(led_IN, LOW);
       button_emergency = 0;
       cancel_signal = 1;
       //부저 함수 추가
@@ -291,6 +283,7 @@ void button_check(){
 
 void send_signal(){  // 중요 - 모든 응급신호 10초간 대기하고 10초 안에 취소 버튼 누를경우 응급신호 보내지 않음
 
+  get_button();
   if(entered == 1 && count == 0){
     
     Serial.println("입장 데이터 전송");
@@ -313,7 +306,7 @@ void send_signal(){  // 중요 - 모든 응급신호 10초간 대기하고 10초
     
   }
   
-
+  get_button();
   if(entered == 2){
 
     //AWS IoT Core
@@ -329,12 +322,14 @@ void send_signal(){  // 중요 - 모든 응급신호 10초간 대기하고 10초
     pir_delay_time = 0;
     enter_time = 0;
     during_time = 0;
+    digitalWrite(led_IN, LOW);
     
   }
 
   //버튼 전송 조건문 
   emergency_time_now = (hour()*3600) + (minute()*60) + second();
-  
+
+  get_button();
   if(emergency_time_now - emergency_time_start >= 5){ // 5초 이상 취소버튼 없을경우
     
     if(button_emergency == 1){
@@ -352,13 +347,15 @@ void send_signal(){  // 중요 - 모든 응급신호 10초간 대기하고 10초
 
       
       Serial.println("응급호출버튼 데이터 전송");
-
+      
+      digitalWrite(led_IN, LOW);
       button_emergency = 0;
       
     }
     
   }
 
+  get_button();
   if(entered && (during_time==1800 || during_time==1799 || during_time==1801)){ //30분
 
       //AWS IoT Core
@@ -374,7 +371,8 @@ void send_signal(){  // 중요 - 모든 응급신호 10초간 대기하고 10초
 
   }
 
-    if(entered && (during_time==2700 || during_time==2699 || during_time==2701)){ //45분
+  get_button();
+  if(entered && (during_time==2700 || during_time==2699 || during_time==2701)){ //45분
 
       //AWS IoT Core
       MQTT::Message message;
@@ -389,6 +387,7 @@ void send_signal(){  // 중요 - 모든 응급신호 10초간 대기하고 10초
 
   }
 
+  get_button();
   if(entered && (during_time==3600 || during_time==3599 || during_time==3601)){ //60분
 
       //AWS IoT Core
@@ -403,7 +402,8 @@ void send_signal(){  // 중요 - 모든 응급신호 10초간 대기하고 10초
       int rc = client->publish(aws_topic, message);
 
   }
-  
+
+  get_button();
   if(entered && (during_time==5400 || during_time==5399 || during_time==5401)){ // 90분
 
       //AWS IoT Core
@@ -419,7 +419,8 @@ void send_signal(){  // 중요 - 모든 응급신호 10초간 대기하고 10초
    
   }
 
-    if(entered && (during_time==7200 || during_time==7199 || during_time==7201)){ // 120분
+  get_button();
+  if(entered && (during_time==7200 || during_time==7199 || during_time==7201)){ // 120분
 
       //AWS IoT Core
       MQTT::Message message;
@@ -433,61 +434,37 @@ void send_signal(){  // 중요 - 모든 응급신호 10초간 대기하고 10초
       int rc = client->publish(aws_topic, message);
    
   }
-
-
-  
-  /*
-  if(entered == 1 && during_time % 5 == 0 && during_time != 0){ // 5초에 한 번
-      
-      //AWS IoT Core
-      MQTT::Message message;
-      String packet;
-      char* buf;
-      
-      packet = "{\"state\":{\"reported\":{\"time\":" + String(during_time) + "},\"desired\":{\"time\":" + String(during_time) + "}}}";
-
-      buf = (char*)packet.c_str();
-      
-      message.qos = MQTT::QOS0;
-      message.retained = false;
-      message.dup = false;
-      message.payload = (void*)buf;
-      message.payloadlen = strlen(buf) + 1;
-      int rc = client->publish(aws_topic, message);
-
-
-    
-  }
-  */
   
 }
 
 
-void get_signal(){
+void get_button(){
 
-  int time1 = 0; // 버튼 누름
-  int time2 = 0; // 버튼 뗌
-  button_push_time = 0;
-  button_count = 0;
-  button_value = digitalRead(button_OUT);
+  if(button_count == 0){
 
-  time1 = (hour()*3600) + (minute()*60) + second();
+    int time1 = 0; // 버튼 누름
+    int time2 = 0; // 버튼 뗌
+    button_push_time = 0;
+    button_count = 0;
+    button_value = digitalRead(button_OUT);
   
-  if(button_value){
-    button_count = 1;
-    while(button_value!=0){
-      button_value = digitalRead(button_OUT);
-      delay(50);    
+    if(button_value){
+      time1 = (hour()*3600) + (minute()*60) + second();
+      button_count = 1;
+      while(button_value!=0){
+        button_value = digitalRead(button_OUT);
+        delay(50);    
+      }
+      time2 = (hour()*3600) + (minute()*60) + second();
+    }
+
+    button_push_time = time2 - time1;
+
+    if(button_count!=0){
+      Serial.print("버튼 눌린 시간 : ");
+      Serial.println(button_push_time);
     }
   }
-
-  time2 = (hour()*3600) + (minute()*60) + second();
-
-  button_push_time = time2 - time1;
-
-  Serial.print("버튼 눌린 시간 :");
-  Serial.println(button_push_time);
-
 }
 
 
