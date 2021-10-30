@@ -243,7 +243,6 @@ void inout_check(){ // (수정 예정)부저 추가하기
     }  
   }else{ // 응급상황 데이터 전송 이후
     if(pir_value == 1){
-      entered = 2;
       emergency_state = 0;
     }else if(during_time-emergency_time_start >= 1200){ // 응급상황 발생 후 20분 지난 상황
       // 추가적인 알림?
@@ -268,7 +267,6 @@ void button_check(){
     emergency_time_start = (hour()*3600) + (minute()*60) + second();
     Serial.println("버튼 응급호출");
     digitalWrite(led_IN, HIGH);
-    //부저 함수 추가
     
   }else if(button_count == 1 && button_push_time >= 3){ // 모든 응급호출 취소 버튼 (버튼 3초 이상 누른경우)
 
@@ -278,7 +276,6 @@ void button_check(){
       digitalWrite(led_IN, LOW);
       button_emergency = 0;
       cancel_signal = 1;
-      //부저 함수 추가
       
     }else{
       
@@ -362,10 +359,8 @@ void send_signal(){  // 중요 - 모든 응급신호 10초간 대기하고 10초
       
       Serial.println("응급호출버튼 데이터 전송");
 
-      //퇴장시간 20분으로 연장
-      emergency_state = 1;
+      emergency_state = 1; //퇴장시간 20분으로 연장
       
-      digitalWrite(led_IN, LOW);
       button_emergency = 0;
       
     }
