@@ -2,7 +2,7 @@ import cv2
 import time
 
 fitToEllipse = False
-cap = cv2.VideoCapture('FALL-Backwards_.mp4')
+cap = cv2.VideoCapture('01.mp4')
 time.sleep(2)
 
 fgbg = cv2.createBackgroundSubtractorMOG2()
@@ -43,22 +43,26 @@ while(1):
             if h < w:
                 j += 1
                 
-            if j > 10:
-                print("FALL")
-                cv2.putText(fgmask, 'FALL', (x, y), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (255,255,255), 2)
+            if j > 25:
+                cv2.putText(fgmask, 'FALL', (x, y), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (0,0,255), 2)
+                cv2.putText(frame, 'FALL', (x, y), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (0,0,255), 2)
+                cv2.rectangle(fgmask,(x,y),(x+w,y+h),(0,0,255),2)
                 cv2.rectangle(frame,(x,y),(x+w,y+h),(0,0,255),2)
-
+    
             if h > w:
                 j = 0 
                 cv2.rectangle(frame,(x,y),(x+w,y+h),(0,255,0),2)
+                cv2.rectangle(fgmask,(x,y),(x+w,y+h),(0,255,0),2)
 
 
+            cv2.imshow('videobk', fgmask)
             cv2.imshow('video', frame)
         
             if cv2.waitKey(1) == ord('q'):
              break
     except Exception as e:
         break
+if j>30 :
+    print("FALL")
+    
 cv2.destroyAllWindows()
-
-
