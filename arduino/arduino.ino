@@ -24,7 +24,14 @@
 
 
 //AWS IOT config, change these:
-
+char ssid[]       = "***";
+char password[]   = "***";
+char aws_endpoint[]    = "***";
+char aws_key[]         = "***";
+char aws_secret[]      = "***";
+char aws_region[]      = "***";
+const char* aws_topic  = "***";
+int port = ***;
 
 
 //MQTT config
@@ -69,7 +76,7 @@ void sendmessage();
 void setup_wifi();
 
 int entered = 0; // 표준 0, 들어감 1, 나감 2
-int count = 0; // 활동감지 횟수
+int count = 0; // 표준 0, 입장 1
 int button_emergency = 0; // 버튼호출 표준 0, 호출 1
 int cancel_signal = 0; // 표준 0, 응급호출 신호 취소 1 
 int pir_delay_time = 0; // 퇴장 판단용 시간 (30초 이상 퇴장)
@@ -181,7 +188,7 @@ void loop() {
   else {
       //handle reconnection
 
-      int time1 = (hour() * 3600) + (minute() * 60) + second();
+    int time1 = (hour() * 3600) + (minute() * 60) + second();
       
       if (connect()) {
           subscribe();
@@ -214,13 +221,12 @@ void loop() {
 
 
 void inout_check(){ // (수정 예정)부저 추가하기
-
+  pir_value = 0;
   pir_value = digitalRead(pir_OUT);
-  pir_delay_time = ((hour() * 3600) + (minute() * 60) + second()) - in_time; // 현재 - 입장시간 = 경과 시간
-
-  get_button();
 
   if(emergency_state == 0){ // 평상시
+    pir_delay_time = ((hour() * 3600) + (minute() * 60) + second()) - in_time; // 현재 - 입장시간 = 경과 시간
+
     if(pir_value == 1 && count == 0){ // 들어오는 경우
 
       Serial.println("들어옴");
@@ -232,7 +238,6 @@ void inout_check(){ // (수정 예정)부저 추가하기
     }else if(pir_value == 1 && count != 0){ // 안에서 움직이는 경우
     
       Serial.println("내부활동");
-      count = 1;
       in_time = ((hour() * 3600) + (minute() * 60) + second()); // 입장 시간 내부 활동시간으로 초기화 
     
     }else if(entered && pir_delay_time >= 30){ // 나가는 경우 (내부활동 30초 이상 없을경우)
@@ -249,7 +254,6 @@ void inout_check(){ // (수정 예정)부저 추가하기
     }
   }
   
-  get_button();
   if(count == 1){
         Serial.print("during_time in inout_check() : ");
         Serial.println(during_time);
@@ -260,32 +264,34 @@ void inout_check(){ // (수정 예정)부저 추가하기
 
 
 void button_check(){
-  
-  if(button_count == 1 && button_push_time < 3){ // 일반적 응급호출 (최대 2.9초 까지 응급호출로 인식)
-    
-    button_emergency = 1;
-    emergency_time_start = (hour()*3600) + (minute()*60) + second();
-    Serial.println("버튼 응급호출");
-    digitalWrite(led_IN, HIGH);
-    
-  }else if(button_count == 1 && button_push_time >= 3){ // 모든 응급호출 취소 버튼 (버튼 3초 이상 누른경우)
 
-    if(button_emergency){
+  if(count != 0){
+    if(button_count == 1 && button_push_time < 3){ // 일반적 응급호출 (최대 2.9초 까지 응급호출로 인식)
+    
+      button_emergency = 1;
+      emergency_time_start = (hour()*3600) + (minute()*60) + second();
+      Serial.println("버튼 응급호출");
+      digitalWrite(led_IN, HIGH);
+    
+    }else if(button_count == 1 && button_push_time >= 3){ // 모든 응급호출 취소 버튼 (버튼 3초 이상 누른경우)
+
+      if(button_emergency){
       
-      Serial.println("버튼 응급호출 취소");
-      digitalWrite(led_IN, LOW);
-      button_emergency = 0;
-      cancel_signal = 1;
+        Serial.println("버튼 응급호출 취소");
+        digitalWrite(led_IN, LOW);
+        button_emergency = 0;
+        cancel_signal = 1;
       
-    }else{
+      }else{
       
-      Serial.println("취소할 응급호출 신호가 존재하지 않습니다");
+        Serial.println("취소할 응급호출 신호가 존재하지 않습니다");
       
+      }
     }
-  }
 
-  button_count = 0;
-  button_push_time = 0;
+    button_count = 0;
+    button_push_time = 0;
+  }
   
 }
 
@@ -296,7 +302,7 @@ void send_signal(){  // 중요 - 모든 응급신호 10초간 대기하고 10초
   if(entered == 1 && count == 0){
     
     Serial.println("입장 데이터 전송");
-    count++;
+    count = 1;
 
     //AWS IoT Core
     MQTT::Message message;
@@ -333,6 +339,8 @@ void send_signal(){  // 중요 - 모든 응급신호 10초간 대기하고 10초
     during_time = 0;
     emergency_time_now = 0;
     emergency_time_start = 0;
+    emergency_state = 0;
+    button_emergency = 0;
     digitalWrite(led_IN, LOW);
     
   }
@@ -465,7 +473,7 @@ void get_button(){
       button_count = 1;
       while(button_value!=0){
         button_value = digitalRead(button_OUT);
-        delay(50);    
+        delay(10);    
       }
       time2 = (hour()*3600) + (minute()*60) + second();
     }
